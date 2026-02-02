@@ -33,10 +33,10 @@ Options:
 
 ## Features
 
+- **Checks company IR websites first**, then falls back to Screener.in
 - Downloads 4 most recent quarterly earnings calls (configurable)
 - Supports investor presentations
-- Searches companies by name on Screener.in
-- Downloads PDFs from BSE India
+- Known IR pages for 25+ major Indian companies
 - Organizes files by company in subdirectories
 - Progress display with rich formatting
 - Handles Indian financial year quarters:
@@ -91,6 +91,9 @@ alias earnings="cd ~/earnings_downloader && python3 main.py"
 
 Then run `earnings` from anywhere.
 
-## Data Source
+## Data Sources (Priority Order)
 
-Transcripts and presentations are sourced from [Screener.in](https://www.screener.in), which aggregates filings from BSE India.
+1. **Company IR Websites** - Official investor relations pages (checked first)
+2. **Screener.in** - Aggregates filings from BSE India (fallback)
+
+Known IR page mappings exist for: Reliance, TCS, Infosys, HDFC Bank, ICICI Bank, Wipro, HCL Tech, Bharti Airtel, Maruti Suzuki, Motherson, Bajaj Finance, Kotak, Axis Bank, ITC, L&T, Sun Pharma, Titan, UltraTech, Nestle India, Power Grid, NTPC, ONGC, SBI, and more.
