@@ -8,8 +8,12 @@ from typing import List
 class Config:
     """Configuration settings."""
     output_dir: str = "./downloads"
-    transcripts_per_company: int = 4
-    include_presentations: bool = False
+    quarters_per_company: int = 5
+
+    # Document types to download
+    include_transcripts: bool = True
+    include_presentations: bool = True
+    include_press_releases: bool = True
 
     # Request settings
     request_timeout: int = 30

@@ -54,8 +54,10 @@ class ScreenerSource:
     def get_earnings_calls(
         self,
         company_name: str,
-        count: int = 4,
-        include_presentations: bool = False
+        count: int = 5,
+        include_transcripts: bool = True,
+        include_presentations: bool = True,
+        include_press_releases: bool = True
     ) -> List[EarningsCall]:
         """Get earnings call documents for a company."""
         calls = []
@@ -76,14 +78,19 @@ class ScreenerSource:
             name_elem = soup.select_one("h1.margin-0")
             actual_name = name_elem.text.strip() if name_elem else company_name
 
-            # Find concalls section
-            concall_section = self._find_concall_section(soup)
-            if not concall_section:
-                print(f"  No concalls section found for {company_name}")
+            # Find documents section
+            doc_section = self._find_concall_section(soup)
+            if not doc_section:
+                print(f"  No documents section found for {company_name}")
                 return calls
 
-            # Parse concall entries
-            entries = self._parse_concall_entries(concall_section, actual_name, include_presentations)
+            # Parse document entries
+            entries = self._parse_concall_entries(
+                doc_section, actual_name,
+                include_transcripts=include_transcripts,
+                include_presentations=include_presentations,
+                include_press_releases=include_press_releases
+            )
             calls.extend(entries)
 
         except Exception as e:
@@ -121,7 +128,9 @@ class ScreenerSource:
         self,
         section: BeautifulSoup,
         company_name: str,
-        include_presentations: bool
+        include_transcripts: bool = True,
+        include_presentations: bool = True,
+        include_press_releases: bool = True
     ) -> List[EarningsCall]:
         """Parse earnings call entries from section."""
         calls = []
@@ -164,59 +173,63 @@ class ScreenerSource:
 
             return "", ""
 
-        # Find transcript links
-        transcript_links = section.find_all("a", string=re.compile(r"transcript", re.I))
-        for link in transcript_links:
-            href = link.get("href", "")
+        def add_call(href, context, doc_type):
             if not href or href in seen_urls:
-                continue
+                return
             seen_urls.add(href)
-
-            # Get context from parent li element
-            parent_li = link.find_parent("li")
-            context = parent_li.get_text(" ", strip=True) if parent_li else ""
             quarter, year = extract_date_info(context)
-
             if not quarter:
                 quarter, year = "Unknown", ""
-
             full_url = href if href.startswith("http") else urljoin(self.BASE_URL, href)
-
             calls.append(EarningsCall(
                 company=company_name,
                 quarter=quarter,
                 year=year,
-                doc_type="transcript",
+                doc_type=doc_type,
                 url=full_url,
                 source="screener"
             ))
 
-        # Find presentation links if requested
+        # Find transcript links
+        if include_transcripts:
+            transcript_links = section.find_all("a", string=re.compile(r"transcript", re.I))
+            for link in transcript_links:
+                parent_li = link.find_parent("li")
+                context = parent_li.get_text(" ", strip=True) if parent_li else ""
+                add_call(link.get("href", ""), context, "transcript")
+
+        # Find presentation links
         if include_presentations:
             ppt_links = section.find_all("a", string=re.compile(r"ppt|presentation", re.I))
             for link in ppt_links:
-                href = link.get("href", "")
-                if not href or href in seen_urls:
-                    continue
-                seen_urls.add(href)
-
                 parent_li = link.find_parent("li")
                 context = parent_li.get_text(" ", strip=True) if parent_li else ""
-                quarter, year = extract_date_info(context)
+                add_call(link.get("href", ""), context, "presentation")
 
-                if not quarter:
-                    quarter, year = "Unknown", ""
+        # Find press release / fact sheet links
+        if include_press_releases:
+            # Look in announcements for press releases and outcome/results
+            all_links = section.find_all("a", href=True)
+            for link in all_links:
+                text = link.get_text(strip=True).lower()
+                href = link.get("href", "")
 
-                full_url = href if href.startswith("http") else urljoin(self.BASE_URL, href)
+                # Check for press release or fact sheet keywords
+                is_press_release = any(kw in text for kw in [
+                    "press release", "press-release", "media release",
+                    "fact sheet", "factsheet", "fact-sheet",
+                    "financial result", "results announcement"
+                ])
 
-                calls.append(EarningsCall(
-                    company=company_name,
-                    quarter=quarter,
-                    year=year,
-                    doc_type="presentation",
-                    url=full_url,
-                    source="screener"
-                ))
+                # Also check parent context for quarterly result announcements
+                parent = link.find_parent("li") or link.find_parent("div")
+                parent_text = parent.get_text(" ", strip=True).lower() if parent else ""
+
+                if is_press_release or (
+                    "outcome" in parent_text and "result" in parent_text and ".pdf" in href.lower()
+                ):
+                    context = parent.get_text(" ", strip=True) if parent else text
+                    add_call(href, context, "press_release")
 
         return calls
 

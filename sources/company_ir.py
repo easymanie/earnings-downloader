@@ -117,8 +117,10 @@ class CompanyIRSource:
     def get_earnings_calls(
         self,
         company_name: str,
-        count: int = 4,
-        include_presentations: bool = False
+        count: int = 5,
+        include_transcripts: bool = True,
+        include_presentations: bool = True,
+        include_press_releases: bool = True
     ) -> List[EarningsCall]:
         """Get earnings call documents from company IR website."""
         calls = []
@@ -136,7 +138,7 @@ class CompanyIRSource:
             soup = BeautifulSoup(resp.text, "html.parser")
             base_url = f"{urlparse(ir_url).scheme}://{urlparse(ir_url).netloc}"
 
-            # Find all PDF links that might be transcripts or presentations
+            # Find all PDF links that might be transcripts, presentations, or press releases
             all_links = soup.find_all("a", href=True)
             seen_urls = set()
 
@@ -148,21 +150,32 @@ class CompanyIRSource:
                 parent = link.find_parent(["li", "tr", "div", "p"])
                 context = parent.get_text(" ", strip=True) if parent else text
 
-                # Check if it's a transcript
+                # Check document type
                 is_transcript = any(kw in text or kw in href.lower() for kw in [
                     "transcript", "concall", "con-call", "conference call",
                     "earnings call", "analyst call", "investor call"
                 ])
 
-                # Check if it's a presentation
                 is_presentation = any(kw in text or kw in href.lower() for kw in [
                     "presentation", "ppt", "investor presentation", "results presentation"
                 ])
 
-                if not is_transcript and not is_presentation:
-                    continue
+                is_press_release = any(kw in text or kw in href.lower() for kw in [
+                    "press release", "press-release", "media release",
+                    "fact sheet", "factsheet", "fact-sheet",
+                    "financial result", "results announcement", "outcome"
+                ])
 
-                if is_presentation and not include_presentations:
+                # Determine doc_type and check if we should include it
+                doc_type = None
+                if is_transcript and include_transcripts:
+                    doc_type = "transcript"
+                elif is_presentation and include_presentations:
+                    doc_type = "presentation"
+                elif is_press_release and include_press_releases:
+                    doc_type = "press_release"
+
+                if not doc_type:
                     continue
 
                 # Build full URL
@@ -183,8 +196,6 @@ class CompanyIRSource:
                     quarter, year = self._extract_quarter_from_text(href)
                 if not quarter:
                     quarter, year = "Unknown", ""
-
-                doc_type = "transcript" if is_transcript else "presentation"
 
                 calls.append(EarningsCall(
                     company=company_name,
