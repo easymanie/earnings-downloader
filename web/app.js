@@ -122,12 +122,12 @@ async function handleDownloadAll() {
     const types = Array.from(typeCheckboxes).map(cb => cb.value);
 
     downloadAllBtn.disabled = true;
-    downloadAllBtn.textContent = 'Downloading...';
+    downloadAllBtn.textContent = 'Preparing ZIP...';
     downloadStatus.classList.remove('hidden');
-    statusMessage.textContent = 'Starting download...';
+    statusMessage.textContent = 'Fetching documents and creating ZIP file...';
 
     try {
-        const response = await fetch(`${API_BASE}/api/downloads`, {
+        const response = await fetch(`${API_BASE}/api/downloads/zip`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -143,12 +143,40 @@ async function handleDownloadAll() {
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Download failed');
+            const errorText = await response.text();
+            let errorMessage = 'Download failed';
+            try {
+                const errorJson = JSON.parse(errorText);
+                errorMessage = errorJson.detail || errorMessage;
+            } catch (e) {
+                errorMessage = errorText || errorMessage;
+            }
+            throw new Error(errorMessage);
         }
 
-        const result = await response.json();
-        statusMessage.textContent = result.message;
+        // Get the blob and trigger download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+
+        // Get filename from Content-Disposition header or use default
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = `${company.replace(/[^a-zA-Z0-9]/g, '_')}_earnings.zip`;
+        if (contentDisposition) {
+            const match = contentDisposition.match(/filename=(.+)/);
+            if (match) {
+                filename = match[1].replace(/"/g, '');
+            }
+        }
+
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+
+        statusMessage.textContent = `Downloaded ${currentDocuments.length} documents as ZIP!`;
 
     } catch (error) {
         console.error('Download error:', error);

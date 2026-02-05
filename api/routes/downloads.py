@@ -1,17 +1,18 @@
 """Download API endpoints."""
 
 import os
-import tempfile
+import io
 import zipfile
+import asyncio
+import aiohttp
 from typing import List, Optional
-from fastapi import APIRouter, Query, HTTPException, BackgroundTasks
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Query, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from core.services import EarningsService
 from core.models import EarningsCall
 from sources.base import Region
-from downloader import Downloader
 from config import config
 
 
@@ -40,13 +41,6 @@ class DownloadRequest(BaseModel):
     include_press_releases: bool = True
 
 
-class DownloadResponse(BaseModel):
-    """Download response."""
-    message: str
-    file_count: int
-    download_url: Optional[str] = None
-
-
 @router.get("/documents", response_model=List[DocumentResponse])
 async def get_documents(
     company: str = Query(..., description="Company name"),
@@ -59,8 +53,6 @@ async def get_documents(
 ):
     """
     Get available earnings documents for a company.
-
-    Returns list of documents with their URLs and metadata.
     """
     region_enum = None
     if region:
@@ -94,13 +86,24 @@ async def get_documents(
     ]
 
 
-@router.post("/downloads", response_model=DownloadResponse)
-async def create_download(request: DownloadRequest):
-    """
-    Download earnings documents for a company.
+async def fetch_file(session: aiohttp.ClientSession, url: str, filename: str) -> tuple:
+    """Fetch a single file and return (filename, content) or (filename, None) on error."""
+    try:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+            if resp.status == 200:
+                content = await resp.read()
+                return (filename, content)
+    except Exception as e:
+        print(f"  Error fetching {url}: {e}")
+    return (filename, None)
 
-    Downloads files to the server and returns a path to access them.
-    For a web interface, this creates a zip file that can be downloaded.
+
+@router.post("/downloads/zip")
+async def download_as_zip(request: DownloadRequest):
+    """
+    Download all earnings documents as a ZIP file.
+
+    Fetches all documents and returns them as a downloadable ZIP.
     """
     region_enum = None
     if request.region:
@@ -121,55 +124,32 @@ async def create_download(request: DownloadRequest):
     if not documents:
         raise HTTPException(status_code=404, detail="No documents found for this company")
 
-    # Download to server
-    downloader = Downloader()
-    output_dir = config.get_output_path(request.company)
-    results = downloader.download_sync(documents, output_dir)
+    # Fetch all files concurrently
+    async with aiohttp.ClientSession(
+        headers={"User-Agent": config.user_agent}
+    ) as session:
+        tasks = [
+            fetch_file(session, doc.url, doc.get_filename())
+            for doc in documents
+        ]
+        results = await asyncio.gather(*tasks)
 
-    success_count = sum(1 for _, success, _ in results if success)
+    # Create ZIP in memory
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for filename, content in results:
+            if content:
+                zf.writestr(filename, content)
 
-    return DownloadResponse(
-        message=f"Downloaded {success_count} of {len(documents)} files to {output_dir}",
-        file_count=success_count,
-        download_url=f"/downloads/{os.path.basename(output_dir)}"
-    )
+    zip_buffer.seek(0)
 
+    # Generate safe filename
+    safe_company = "".join(c if c.isalnum() or c in " -_" else "_" for c in request.company)
+    safe_company = safe_company.strip().replace(" ", "_")[:30]
+    zip_filename = f"{safe_company}_earnings.zip"
 
-@router.get("/downloads/{company_folder}")
-async def get_downloaded_files(company_folder: str):
-    """
-    List downloaded files for a company.
-    """
-    folder_path = os.path.join(config.output_dir, company_folder)
-
-    if not os.path.exists(folder_path):
-        raise HTTPException(status_code=404, detail="Download folder not found")
-
-    files = []
-    for f in os.listdir(folder_path):
-        filepath = os.path.join(folder_path, f)
-        if os.path.isfile(filepath):
-            files.append({
-                "name": f,
-                "size": os.path.getsize(filepath),
-                "url": f"/api/downloads/{company_folder}/{f}"
-            })
-
-    return {"folder": company_folder, "files": files}
-
-
-@router.get("/downloads/{company_folder}/{filename}")
-async def download_file(company_folder: str, filename: str):
-    """
-    Download a specific file.
-    """
-    filepath = os.path.join(config.output_dir, company_folder, filename)
-
-    if not os.path.exists(filepath):
-        raise HTTPException(status_code=404, detail="File not found")
-
-    return FileResponse(
-        filepath,
-        filename=filename,
-        media_type="application/octet-stream"
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={zip_filename}"}
     )
