@@ -210,22 +210,36 @@ class ScreenerSource(BaseSource):
             all_links = section.find_all("a", href=True)
             for link in all_links:
                 text = link.get_text(strip=True).lower()
-                href = link.get("href", "")
+                href = link.get("href", "").lower()
+
+                # Only accept PDFs from official sources
+                is_official_source = any(domain in href for domain in [
+                    "bseindia.com", "nseindia.com",
+                    # Company domains are OK too
+                ])
+
+                # Must be a PDF
+                is_pdf = ".pdf" in href
+
+                # Look for factsheet/press release keywords
+                is_factsheet = any(kw in text or kw in href for kw in [
+                    "fact sheet", "factsheet", "fact-sheet",
+                    "snapshot", "highlights", "key highlights",
+                    "financial highlights", "results snapshot"
+                ])
 
                 is_press_release = any(kw in text for kw in [
                     "press release", "press-release", "media release",
-                    "fact sheet", "factsheet", "fact-sheet",
-                    "financial result", "results announcement"
+                    "outcome", "financial result"
                 ])
 
                 parent = link.find_parent("li") or link.find_parent("div")
                 parent_text = parent.get_text(" ", strip=True).lower() if parent else ""
 
-                if is_press_release or (
-                    "outcome" in parent_text and "result" in parent_text and ".pdf" in href.lower()
-                ):
+                # Accept if: (factsheet OR press release from official source) AND is PDF
+                if is_pdf and (is_factsheet or (is_press_release and is_official_source)):
                     context = parent.get_text(" ", strip=True) if parent else text
-                    add_call(href, context, "press_release")
+                    add_call(link.get("href", ""), context, "press_release")
 
         return calls
 

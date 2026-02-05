@@ -168,11 +168,24 @@ class CompanyIRSource(BaseSource):
                     "presentation", "ppt", "investor presentation", "results presentation"
                 ])
 
+                # Look for factsheet keywords (official company snapshots)
+                is_factsheet = any(kw in text or kw in href.lower() for kw in [
+                    "fact sheet", "factsheet", "fact-sheet",
+                    "snapshot", "highlights", "key highlights",
+                    "financial highlights", "results snapshot",
+                    "quarterly snapshot", "performance snapshot"
+                ])
+
+                # Press releases from company website
                 is_press_release = any(kw in text or kw in href.lower() for kw in [
                     "press release", "press-release", "media release",
-                    "fact sheet", "factsheet", "fact-sheet",
                     "financial result", "results announcement", "outcome"
                 ])
+
+                # Combine: factsheet OR press release, but prefer PDFs
+                is_press_release = (is_factsheet or is_press_release) and (
+                    ".pdf" in href.lower() or is_factsheet
+                )
 
                 doc_type = None
                 if is_transcript and include_transcripts:
