@@ -33,7 +33,7 @@ class DocumentResponse(BaseModel):
 
 class DownloadRequest(BaseModel):
     """Download request body."""
-    company: str
+    company: str  # Can be comma-separated for multiple companies
     region: Optional[str] = "india"
     count: int = 5
     include_transcripts: bool = True
@@ -43,16 +43,16 @@ class DownloadRequest(BaseModel):
 
 @router.get("/documents", response_model=List[DocumentResponse])
 async def get_documents(
-    company: str = Query(..., description="Company name"),
+    company: str = Query(..., description="Company name(s), comma-separated for multiple"),
     region: Optional[str] = Query("india", description="Region (india, us, japan, korea, china)"),
-    count: int = Query(5, ge=1, le=20, description="Number of quarters"),
+    count: int = Query(5, ge=1, le=20, description="Number of quarters per company"),
     types: Optional[str] = Query(
         "transcript,presentation,press_release",
         description="Document types (comma-separated)"
     )
 ):
     """
-    Get available earnings documents for a company.
+    Get available earnings documents for one or more companies.
     """
     region_enum = None
     if region:
@@ -63,14 +63,20 @@ async def get_documents(
 
     doc_types = [t.strip() for t in types.split(",")] if types else ["transcript"]
 
-    documents = service.get_earnings_documents(
-        company,
-        region=region_enum,
-        count=count,
-        include_transcripts="transcript" in doc_types,
-        include_presentations="presentation" in doc_types,
-        include_press_releases="press_release" in doc_types
-    )
+    # Support multiple companies (comma-separated)
+    companies = [c.strip() for c in company.split(",") if c.strip()]
+
+    all_documents = []
+    for comp in companies:
+        documents = service.get_earnings_documents(
+            comp,
+            region=region_enum,
+            count=count,
+            include_transcripts="transcript" in doc_types,
+            include_presentations="presentation" in doc_types,
+            include_press_releases="press_release" in doc_types
+        )
+        all_documents.extend(documents)
 
     return [
         DocumentResponse(
@@ -82,7 +88,7 @@ async def get_documents(
             source=doc.source,
             filename=doc.get_filename()
         )
-        for doc in documents
+        for doc in all_documents
     ]
 
 
@@ -104,6 +110,7 @@ async def download_as_zip(request: DownloadRequest):
     Download all earnings documents as a ZIP file.
 
     Fetches all documents and returns them as a downloadable ZIP.
+    Supports multiple companies (comma-separated).
     """
     region_enum = None
     if request.region:
@@ -112,17 +119,23 @@ async def download_as_zip(request: DownloadRequest):
         except ValueError:
             raise HTTPException(status_code=400, detail=f"Invalid region: {request.region}")
 
-    documents = service.get_earnings_documents(
-        request.company,
-        region=region_enum,
-        count=request.count,
-        include_transcripts=request.include_transcripts,
-        include_presentations=request.include_presentations,
-        include_press_releases=request.include_press_releases
-    )
+    # Support multiple companies (comma-separated)
+    companies = [c.strip() for c in request.company.split(",") if c.strip()]
 
-    if not documents:
-        raise HTTPException(status_code=404, detail="No documents found for this company")
+    all_documents = []
+    for comp in companies:
+        documents = service.get_earnings_documents(
+            comp,
+            region=region_enum,
+            count=request.count,
+            include_transcripts=request.include_transcripts,
+            include_presentations=request.include_presentations,
+            include_press_releases=request.include_press_releases
+        )
+        all_documents.extend(documents)
+
+    if not all_documents:
+        raise HTTPException(status_code=404, detail="No documents found for the specified companies")
 
     # Fetch all files concurrently
     async with aiohttp.ClientSession(
@@ -130,7 +143,7 @@ async def download_as_zip(request: DownloadRequest):
     ) as session:
         tasks = [
             fetch_file(session, doc.url, doc.get_filename())
-            for doc in documents
+            for doc in all_documents
         ]
         results = await asyncio.gather(*tasks)
 
@@ -144,9 +157,12 @@ async def download_as_zip(request: DownloadRequest):
     zip_buffer.seek(0)
 
     # Generate safe filename
-    safe_company = "".join(c if c.isalnum() or c in " -_" else "_" for c in request.company)
-    safe_company = safe_company.strip().replace(" ", "_")[:30]
-    zip_filename = f"{safe_company}_earnings.zip"
+    if len(companies) == 1:
+        safe_name = "".join(c if c.isalnum() or c in " -_" else "_" for c in companies[0])
+        safe_name = safe_name.strip().replace(" ", "_")[:30]
+    else:
+        safe_name = f"{len(companies)}_companies"
+    zip_filename = f"{safe_name}_earnings.zip"
 
     return StreamingResponse(
         zip_buffer,
