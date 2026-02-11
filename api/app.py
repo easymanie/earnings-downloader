@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from .routes import companies_router, downloads_router
+from .routes import companies_router, downloads_router, analysis_router
 
 
 # Get the project root directory
@@ -23,6 +23,7 @@ app = FastAPI(
 # Include API routers
 app.include_router(companies_router)
 app.include_router(downloads_router)
+app.include_router(analysis_router)
 
 
 # Serve static files for frontend
@@ -46,6 +47,24 @@ async def root():
             "download": "POST /api/downloads"
         }
     }
+
+
+@app.get("/analysis")
+async def analysis_page():
+    """Serve the analysis page."""
+    page_path = os.path.join(WEB_DIR, "analysis.html")
+    if os.path.exists(page_path):
+        return FileResponse(page_path)
+    return {"error": "Analysis page not found"}
+
+
+@app.get("/industry")
+async def industry_page():
+    """Serve the industry analysis page."""
+    page_path = os.path.join(WEB_DIR, "industry.html")
+    if os.path.exists(page_path):
+        return FileResponse(page_path)
+    return {"error": "Industry page not found"}
 
 
 @app.get("/health")

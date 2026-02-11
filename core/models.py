@@ -7,6 +7,128 @@ from pydantic import BaseModel, Field
 from rapidfuzz import fuzz, process
 
 
+# --- Analysis Models ---
+
+
+class FinancialMetric(BaseModel):
+    """A single financial metric extracted from an earnings document."""
+    name: str
+    value: Optional[float] = None
+    unit: str = "INR Cr"
+    period: str = ""
+    yoy_growth: Optional[float] = None
+    qoq_growth: Optional[float] = None
+    margin: Optional[float] = None
+    raw_text: str = ""
+
+
+class ManagementCommentary(BaseModel):
+    """Key management commentary point from a transcript."""
+    topic: str
+    summary: str
+    sentiment: str = "neutral"
+    verbatim_quote: Optional[str] = None
+
+
+class CompanyAnalysis(BaseModel):
+    """Complete analysis result for one company-quarter."""
+    company: str
+    quarter: str
+    year: str
+    doc_types_analyzed: List[str] = Field(default_factory=list)
+    metrics: List[FinancialMetric] = Field(default_factory=list)
+    commentary: List[ManagementCommentary] = Field(default_factory=list)
+    themes: List[str] = Field(default_factory=list)
+    key_highlights: List[str] = Field(default_factory=list)
+    risks_flagged: List[str] = Field(default_factory=list)
+    guidance: Optional[str] = None
+    analyzed_at: Optional[datetime] = None
+    llm_provider: str = ""
+    llm_model: str = ""
+    source_files: List[str] = Field(default_factory=list)
+
+
+class MaterialChange(BaseModel):
+    """A material change flagged in QoQ/YoY comparison."""
+    metric_name: str
+    current_value: Optional[float] = None
+    previous_value: Optional[float] = None
+    change_pct: Optional[float] = None
+    direction: str = ""
+    significance: str = ""
+    context: str = ""
+
+
+class QuarterComparison(BaseModel):
+    """Comparison between two quarters for a company."""
+    company: str
+    current_quarter: str
+    previous_quarter: str
+    comparison_type: str
+    material_changes: List[MaterialChange] = Field(default_factory=list)
+    new_themes: List[str] = Field(default_factory=list)
+    dropped_themes: List[str] = Field(default_factory=list)
+    summary: str = ""
+
+
+class MetricTrend(BaseModel):
+    """Trend of a single metric across multiple quarters."""
+    metric: str
+    trend: str = ""
+    direction: str = "stable"
+    notable: bool = False
+
+
+class MultiQuarterAnalysis(BaseModel):
+    """Multi-quarter longitudinal analysis for a single company."""
+    company: str
+    target_quarter: str
+    target_year: str
+    lookback_quarters: int = 4
+    quarters_analyzed: List[str] = Field(default_factory=list)
+
+    # Per-quarter data (most recent first)
+    quarter_analyses: List[CompanyAnalysis] = Field(default_factory=list)
+
+    # Longitudinal synthesis
+    current_quarter_summary: str = ""
+    metric_trends: List[MetricTrend] = Field(default_factory=list)
+    persistent_themes: List[str] = Field(default_factory=list)
+    emerging_themes: List[str] = Field(default_factory=list)
+    fading_themes: List[str] = Field(default_factory=list)
+    narrative_shifts: List[str] = Field(default_factory=list)
+    consistency_assessment: str = ""
+
+    analyzed_at: Optional[datetime] = None
+
+
+class IndustryTheme(BaseModel):
+    """A theme identified across multiple companies in an industry."""
+    theme: str
+    companies_mentioning: List[str] = Field(default_factory=list)
+    frequency: int = 0
+    representative_quotes: List[str] = Field(default_factory=list)
+    sentiment: str = "neutral"
+
+
+class IndustryAnalysis(BaseModel):
+    """Industry-level analysis aggregating multiple companies."""
+    industry: str
+    quarter: str
+    year: str
+    companies_analyzed: List[str] = Field(default_factory=list)
+    revenue_growth_range: Optional[str] = None
+    margin_trend: Optional[str] = None
+    common_themes: List[IndustryTheme] = Field(default_factory=list)
+    divergences: List[str] = Field(default_factory=list)
+    headline: str = ""
+    narrative: str = ""
+    analyzed_at: Optional[datetime] = None
+
+
+# --- Download Models ---
+
+
 class EarningsCall(BaseModel):
     """Represents an earnings call document."""
 

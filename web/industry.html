@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Industry Analysis</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Industry Analysis</h1>
+            <p class="subtitle">Cross-company comparison & newsletter-ready narratives</p>
+            <nav class="nav-bar">
+                <a href="/" class="nav-link">Download</a>
+                <a href="/analysis" class="nav-link">Analysis</a>
+                <a href="/industry" class="nav-link active">Industry</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="analysis-form">
+                <div class="form-group grow">
+                    <label for="industry">Industry</label>
+                    <select id="industry">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="quarter">Quarter</label>
+                    <select id="quarter">
+                        <option value="Q1">Q1</option>
+                        <option value="Q2">Q2</option>
+                        <option value="Q3" selected>Q3</option>
+                        <option value="Q4">Q4</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="year">Year</label>
+                    <select id="year">
+                        <option value="FY24">FY24</option>
+                        <option value="FY25">FY25</option>
+                        <option value="FY26" selected>FY26</option>
+                        <option value="FY27">FY27</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="llm">LLM</label>
+                    <select id="llm">
+                        <option value="claude">Claude</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="gemini">Gemini</option>
+                    </select>
+                </div>
+                <button type="button" class="analyze-btn" id="analyze-btn">Analyze Industry</button>
+            </div>
+
+            <div id="companies-section">
+                <div id="company-chips" class="company-chips"></div>
+            </div>
+
+            <div id="status" class="hidden"></div>
+
+            <div id="results" class="hidden">
+                <!-- Headline -->
+                <div id="headline" class="headline-box"></div>
+
+                <!-- Industry themes -->
+                <div class="panel">
+                    <h3>Industry Themes</h3>
+                    <ul id="industry-themes" class="themes-list"></ul>
+                </div>
+
+                <!-- Company comparison table -->
+                <div class="panel">
+                    <h3>Company Comparison</h3>
+                    <p id="no-comparison-data" class="neutral" style="font-size:0.9rem;">
+                        Company-level analyses needed for comparison table. Run individual analyses first.
+                    </p>
+                    <table class="metrics-table" id="comparison-table" style="display:none;">
+                        <thead id="comparison-head"></thead>
+                        <tbody id="comparison-body"></tbody>
+                    </table>
+                </div>
+
+                <!-- Divergences -->
+                <div id="divergences-panel" class="panel hidden">
+                    <h3>Divergences</h3>
+                    <ul id="divergences-list" class="highlights-list"></ul>
+                </div>
+
+                <!-- Narrative -->
+                <div class="panel">
+                    <h3>Industry Narrative</h3>
+                    <div id="narrative" class="narrative-text"></div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>API Docs: <a href="/docs">/docs</a></p>
+        </footer>
+    </div>
+
+    <script src="/static/industry.js"></script>
+</body>
+</html>

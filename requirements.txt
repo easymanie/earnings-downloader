@@ -6,3 +6,12 @@ pydantic>=2.0.0
 fastapi>=0.100.0
 uvicorn>=0.22.0
 rapidfuzz>=3.0.0
+
+# PDF extraction
+PyMuPDF>=1.23.0
+pdfplumber>=0.10.0
+
+# LLM clients
+anthropic>=0.40.0
+openai>=1.50.0
+google-generativeai>=0.8.0

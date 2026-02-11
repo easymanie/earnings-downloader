@@ -1,0 +1,44 @@
+{
+  "industries": {
+    "IT Services": {
+      "companies": ["TCS", "Infosys", "Wipro", "HCL Tech", "Tech Mahindra", "LTIMindtree", "Persistent Systems", "Coforge", "Mphasis", "KPIT Technologies"],
+      "description": "IT services, consulting, and software"
+    },
+    "Private Banks": {
+      "companies": ["HDFC Bank", "ICICI Bank", "Kotak Mahindra Bank", "Axis Bank", "IndusInd Bank", "Federal Bank", "IDFC First Bank", "Bandhan Bank"],
+      "description": "Private sector banks"
+    },
+    "PSU Banks": {
+      "companies": ["SBI", "Bank of Baroda", "Punjab National Bank", "Canara Bank", "Union Bank", "Indian Bank"],
+      "description": "Public sector banks"
+    },
+    "FMCG": {
+      "companies": ["Hindustan Unilever", "ITC", "Nestle India", "Britannia", "Dabur", "Marico", "Godrej Consumer", "Colgate India", "Emami"],
+      "description": "Fast-moving consumer goods"
+    },
+    "Auto & Auto Ancillaries": {
+      "companies": ["Maruti Suzuki", "Tata Motors", "M&M", "Bajaj Auto", "Hero MotoCorp", "TVS Motor", "Motherson", "Bosch India"],
+      "description": "Automobile manufacturers and component suppliers"
+    },
+    "Pharma & Healthcare": {
+      "companies": ["Sun Pharma", "Dr. Reddy's", "Cipla", "Divi's Labs", "Lupin", "Aurobindo Pharma", "Biocon", "Torrent Pharma"],
+      "description": "Pharmaceuticals and healthcare services"
+    },
+    "Telecom": {
+      "companies": ["Bharti Airtel", "Reliance Jio", "Vodafone Idea"],
+      "description": "Telecommunications services"
+    },
+    "Oil & Gas": {
+      "companies": ["Reliance Industries", "ONGC", "Indian Oil", "BPCL", "HPCL", "GAIL"],
+      "description": "Oil exploration, refining, and distribution"
+    },
+    "Cement": {
+      "companies": ["UltraTech Cement", "Ambuja Cements", "ACC", "Shree Cement", "Dalmia Bharat", "JK Cement"],
+      "description": "Cement manufacturers"
+    },
+    "Metals & Mining": {
+      "companies": ["Tata Steel", "JSW Steel", "Hindalco", "Vedanta", "NMDC", "Coal India"],
+      "description": "Steel, aluminum, and mining companies"
+    }
+  }
+}

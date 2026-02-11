@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earnings Analyzer</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Earnings Analyzer</h1>
+            <p class="subtitle">Multi-quarter analysis with trend context</p>
+            <nav class="nav-bar">
+                <a href="/" class="nav-link">Download</a>
+                <a href="/analysis" class="nav-link active">Analysis</a>
+                <a href="/industry" class="nav-link">Industry</a>
+            </nav>
+        </header>
+
+        <main>
+            <form id="analysis-form" class="analysis-form">
+                <div class="form-group grow">
+                    <label for="company">Company</label>
+                    <input type="text" id="company" placeholder="e.g., HDFC Bank, Infosys" required>
+                </div>
+                <div class="form-group">
+                    <label for="quarter">Quarter</label>
+                    <select id="quarter">
+                        <option value="Q1">Q1</option>
+                        <option value="Q2">Q2</option>
+                        <option value="Q3" selected>Q3</option>
+                        <option value="Q4">Q4</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="year">Year</label>
+                    <select id="year">
+                        <option value="FY24">FY24</option>
+                        <option value="FY25">FY25</option>
+                        <option value="FY26" selected>FY26</option>
+                        <option value="FY27">FY27</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="lookback">Lookback</label>
+                    <select id="lookback">
+                        <option value="2">2 quarters</option>
+                        <option value="4" selected>4 quarters</option>
+                        <option value="6">6 quarters</option>
+                        <option value="8">8 quarters</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="llm">LLM</label>
+                    <select id="llm">
+                        <option value="ollama">Ollama (local)</option>
+                        <option value="claude">Claude</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="gemini">Gemini</option>
+                    </select>
+                </div>
+                <button type="submit" class="analyze-btn" id="analyze-btn">Analyze</button>
+            </form>
+
+            <div id="status" class="hidden"></div>
+
+            <div id="results" class="hidden">
+
+                <!-- Section 1: Current Quarter -->
+                <h2 id="current-quarter-heading" class="section-heading"></h2>
+
+                <div class="panel">
+                    <h3>Key Metrics</h3>
+                    <table class="metrics-table">
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Value</th>
+                                <th>QoQ</th>
+                                <th>YoY</th>
+                                <th>Margin</th>
+                            </tr>
+                        </thead>
+                        <tbody id="metrics-body"></tbody>
+                    </table>
+                </div>
+
+                <div class="two-col">
+                    <div class="panel">
+                        <h3>Themes</h3>
+                        <ul id="themes-list" class="themes-list"></ul>
+                    </div>
+                    <div class="panel">
+                        <h3>Key Highlights</h3>
+                        <ul id="highlights-list" class="highlights-list"></ul>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3>Management Commentary</h3>
+                    <div id="commentary-list"></div>
+                </div>
+
+                <div id="guidance-panel" class="panel hidden">
+                    <h3>Forward Guidance</h3>
+                    <p id="guidance-text" style="font-size: 0.9rem; line-height: 1.6;"></p>
+                </div>
+
+                <!-- Section 2: Trend Context -->
+                <h2 id="trend-heading" class="section-heading"></h2>
+
+                <!-- Consistency assessment -->
+                <div id="consistency-box" class="headline-box"></div>
+
+                <!-- Current quarter summary -->
+                <div class="panel">
+                    <h3>This Quarter in Context</h3>
+                    <p id="quarter-summary" class="narrative-text"></p>
+                </div>
+
+                <!-- Metric Trends -->
+                <div class="panel">
+                    <h3>Metric Trends</h3>
+                    <div id="metric-trends-list"></div>
+                </div>
+
+                <!-- Metrics Over Time table -->
+                <div class="panel">
+                    <h3>Metrics Over Time</h3>
+                    <div style="overflow-x: auto;">
+                        <table class="metrics-table" id="metrics-over-time">
+                            <thead id="mot-head"></thead>
+                            <tbody id="mot-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Theme Evolution -->
+                <div class="panel">
+                    <h3>Theme Evolution</h3>
+                    <div id="theme-persistent" class="theme-section"></div>
+                    <div id="theme-emerging" class="theme-section"></div>
+                    <div id="theme-fading" class="theme-section"></div>
+                </div>
+
+                <!-- Narrative Shifts -->
+                <div id="narrative-shifts-panel" class="panel hidden">
+                    <h3>Narrative Shifts</h3>
+                    <ul id="narrative-shifts-list" class="highlights-list"></ul>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>API Docs: <a href="/docs">/docs</a></p>
+        </footer>
+    </div>
+
+    <script src="/static/analysis.js"></script>
+</body>
+</html>

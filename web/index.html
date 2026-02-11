@@ -11,6 +11,11 @@
         <header>
             <h1>Earnings Downloader</h1>
             <p class="subtitle">Download transcripts, presentations & press releases</p>
+            <nav class="nav-bar">
+                <a href="/" class="nav-link active">Download</a>
+                <a href="/analysis" class="nav-link">Analysis</a>
+                <a href="/industry" class="nav-link">Industry</a>
+            </nav>
         </header>
 
         <main>
@@ -84,7 +89,10 @@
                     </tbody>
                 </table>
                 <div id="no-results" class="hidden">No documents found for this company.</div>
-                <button type="button" id="download-all-btn" class="hidden">Download All</button>
+                <div class="button-row">
+                    <button type="button" id="verify-btn" class="hidden">Verify Quarters</button>
+                    <button type="button" id="download-all-btn" class="hidden">Download All</button>
+                </div>
             </div>
 
             <div id="download-status" class="hidden">

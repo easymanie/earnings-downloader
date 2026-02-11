@@ -140,19 +140,22 @@ class ScreenerSource(BaseSource):
         calls = []
         seen_urls = set()
 
-        # Month to quarter mapping (Indian financial year: Apr-Mar)
+        # Month-to-quarter mapping for RELEASE DATES (Indian FY: Apr-Mar).
+        # Documents are published ~1-2 months after quarter ends, so the
+        # month here is when results were released, not the quarter itself.
+        # e.g. Oct/Nov = Q2 results (Jul-Sep), Jan/Feb = Q3 results (Oct-Dec)
         month_to_quarter = {
             "jan": ("Q3", lambda y: f"FY{(int(y) % 100):02d}"),
             "feb": ("Q3", lambda y: f"FY{(int(y) % 100):02d}"),
             "mar": ("Q4", lambda y: f"FY{(int(y) % 100):02d}"),
             "apr": ("Q4", lambda y: f"FY{(int(y) % 100):02d}"),
-            "may": ("Q1", lambda y: f"FY{((int(y) + 1) % 100):02d}"),
+            "may": ("Q4", lambda y: f"FY{(int(y) % 100):02d}"),
             "jun": ("Q1", lambda y: f"FY{((int(y) + 1) % 100):02d}"),
             "jul": ("Q1", lambda y: f"FY{((int(y) + 1) % 100):02d}"),
-            "aug": ("Q2", lambda y: f"FY{((int(y) + 1) % 100):02d}"),
+            "aug": ("Q1", lambda y: f"FY{((int(y) + 1) % 100):02d}"),
             "sep": ("Q2", lambda y: f"FY{((int(y) + 1) % 100):02d}"),
             "oct": ("Q2", lambda y: f"FY{((int(y) + 1) % 100):02d}"),
-            "nov": ("Q3", lambda y: f"FY{((int(y) + 1) % 100):02d}"),
+            "nov": ("Q2", lambda y: f"FY{((int(y) + 1) % 100):02d}"),
             "dec": ("Q3", lambda y: f"FY{((int(y) + 1) % 100):02d}"),
         }
 

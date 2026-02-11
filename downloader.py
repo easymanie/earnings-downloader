@@ -8,6 +8,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, Downlo
 
 from config import config
 from utils import EarningsCall
+from analysis.quarter_verify import verify_and_correct
 
 
 class Downloader:
@@ -27,15 +28,15 @@ class Downloader:
         output_dir: str,
         progress: Progress,
         task_id: int
-    ) -> Tuple[bool, str]:
-        """Download a single file."""
+    ) -> Tuple[bool, str, EarningsCall]:
+        """Download a single file, verifying quarter from PDF content."""
         filename = call.get_filename()
         filepath = os.path.join(output_dir, filename)
 
         # Skip if already exists
         if os.path.exists(filepath):
             progress.update(task_id, description=f"[yellow]Skipped (exists): {filename}")
-            return True, filepath
+            return True, filepath, call
 
         for attempt in range(config.max_retries):
             try:
@@ -44,20 +45,31 @@ class Downloader:
                         content = await resp.read()
                         with open(filepath, "wb") as f:
                             f.write(content)
-                        progress.update(task_id, description=f"[green]Downloaded: {filename}")
-                        return True, filepath
+
+                        # Verify quarter from PDF content
+                        corrected_call, was_corrected, was_verified = verify_and_correct(call, content)
+                        if was_corrected:
+                            new_filepath = os.path.join(output_dir, corrected_call.get_filename())
+                            os.rename(filepath, new_filepath)
+                            filepath = new_filepath
+                            progress.update(task_id, description=f"[green]Downloaded (corrected): {corrected_call.get_filename()}")
+                        elif not was_verified:
+                            progress.update(task_id, description=f"[yellow]Downloaded (unverified): {filename}")
+                        else:
+                            progress.update(task_id, description=f"[green]Downloaded: {filename}")
+                        return True, filepath, corrected_call
                     else:
                         if attempt == config.max_retries - 1:
                             progress.update(task_id, description=f"[red]Failed ({resp.status}): {filename}")
-                            return False, ""
+                            return False, "", call
 
             except Exception as e:
                 if attempt == config.max_retries - 1:
                     progress.update(task_id, description=f"[red]Error: {filename} - {str(e)[:30]}")
-                    return False, ""
+                    return False, "", call
                 await asyncio.sleep(config.retry_delay)
 
-        return False, ""
+        return False, "", call
 
     async def download_all(
         self,
@@ -82,9 +94,9 @@ class Downloader:
                     tasks.append((call, task, task_id))
 
                 for call, task, task_id in tasks:
-                    success, path = await task
+                    success, path, corrected_call = await task
                     progress.update(task_id, completed=1)
-                    results.append((call, success, path))
+                    results.append((corrected_call, success, path))
 
         return results
 

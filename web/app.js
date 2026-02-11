@@ -11,6 +11,7 @@ const resultsBody = document.getElementById('results-body');
 const loadingEl = document.getElementById('loading');
 const noResultsEl = document.getElementById('no-results');
 const downloadAllBtn = document.getElementById('download-all-btn');
+const verifyBtn = document.getElementById('verify-btn');
 const downloadStatus = document.getElementById('download-status');
 const statusMessage = document.getElementById('status-message');
 const searchBtn = document.getElementById('search-btn');
@@ -18,6 +19,7 @@ const searchBtn = document.getElementById('search-btn');
 // Event Listeners
 searchForm.addEventListener('submit', handleSearch);
 downloadAllBtn.addEventListener('click', handleDownloadAll);
+verifyBtn.addEventListener('click', handleVerifyQuarters);
 
 async function handleSearch(e) {
     e.preventDefault();
@@ -108,8 +110,87 @@ function displayResults(documents) {
         resultsBody.appendChild(row);
     });
 
+    verifyBtn.classList.remove('hidden');
     downloadAllBtn.classList.remove('hidden');
     downloadAllBtn.textContent = `Download All (${documents.length} files)`;
+}
+
+function displayVerifiedResults(documents) {
+    resultsBody.innerHTML = '';
+
+    let correctedCount = 0;
+    let unverifiedCount = 0;
+    documents.forEach(doc => {
+        const row = document.createElement('tr');
+        let quarterCell;
+        if (doc.was_corrected) {
+            correctedCount++;
+            quarterCell = `<span class="quarter-corrected">${escapeHtml(doc.quarter)} ${escapeHtml(doc.year)}</span>`
+                + `<span class="quarter-original">${escapeHtml(doc.original_quarter)} ${escapeHtml(doc.original_year)}</span>`;
+        } else if (!doc.verified) {
+            unverifiedCount++;
+            quarterCell = `<span class="quarter-unverified">${escapeHtml(doc.quarter)} ${escapeHtml(doc.year)}</span>`
+                + `<span class="quarter-unverified-label">unverified</span>`;
+        } else {
+            quarterCell = `${escapeHtml(doc.quarter)} ${escapeHtml(doc.year)}`;
+        }
+        row.innerHTML = `
+            <td>${escapeHtml(doc.company.substring(0, 30))}</td>
+            <td>${quarterCell}</td>
+            <td>${formatDocType(doc.doc_type)}</td>
+            <td>${escapeHtml(doc.source)}</td>
+            <td>
+                <a href="${escapeHtml(doc.url)}" target="_blank" class="btn-download" style="display:inline-block;text-decoration:none;color:white;">
+                    Download
+                </a>
+            </td>
+        `;
+        resultsBody.appendChild(row);
+    });
+
+    return { correctedCount, unverifiedCount };
+}
+
+async function handleVerifyQuarters() {
+    if (currentDocuments.length === 0) return;
+
+    verifyBtn.disabled = true;
+    verifyBtn.textContent = 'Verifying...';
+    downloadStatus.classList.remove('hidden');
+    statusMessage.textContent = 'Downloading PDFs to verify quarter labels...';
+
+    try {
+        const response = await fetch(`${API_BASE}/api/documents/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ documents: currentDocuments })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Verification failed');
+        }
+
+        const verified = await response.json();
+        currentDocuments = verified;
+        const { correctedCount, unverifiedCount } = displayVerifiedResults(verified);
+
+        const parts = [];
+        if (correctedCount > 0) parts.push(`${correctedCount} corrected`);
+        if (unverifiedCount > 0) parts.push(`${unverifiedCount} unverified (no quarter found in PDF)`);
+        if (parts.length > 0) {
+            statusMessage.textContent = `Verified: ${parts.join(', ')}.`;
+        } else {
+            statusMessage.textContent = 'Verified: all quarter labels confirmed from PDF content.';
+        }
+
+    } catch (error) {
+        console.error('Verify error:', error);
+        statusMessage.textContent = `Error: ${error.message}`;
+    } finally {
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = 'Verify Quarters';
+    }
 }
 
 async function handleDownloadAll() {

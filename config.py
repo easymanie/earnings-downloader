@@ -39,6 +39,30 @@ class Config:
     tdnet_api_id: Optional[str] = field(default_factory=lambda: os.environ.get("TDNET_API_ID"))
     tdnet_api_password: Optional[str] = field(default_factory=lambda: os.environ.get("TDNET_API_PASSWORD"))
 
+    # LLM Configuration
+    llm_provider: str = field(default_factory=lambda: os.environ.get("LLM_PROVIDER", "claude"))
+
+    # LLM API Keys
+    anthropic_api_key: Optional[str] = field(default_factory=lambda: os.environ.get("ANTHROPIC_API_KEY"))
+    openai_api_key: Optional[str] = field(default_factory=lambda: os.environ.get("OPENAI_API_KEY"))
+    google_api_key: Optional[str] = field(default_factory=lambda: os.environ.get("GOOGLE_API_KEY"))
+
+    # LLM Model selection
+    claude_model: str = field(default_factory=lambda: os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-20250514"))
+    openai_model: str = field(default_factory=lambda: os.environ.get("OPENAI_MODEL", "gpt-4o"))
+    gemini_model: str = field(default_factory=lambda: os.environ.get("GEMINI_MODEL", "gemini-2.0-flash"))
+    ollama_model: str = field(default_factory=lambda: os.environ.get("OLLAMA_MODEL", "llama3.1:8b"))
+    ollama_url: str = field(default_factory=lambda: os.environ.get("OLLAMA_URL", "http://localhost:11434"))
+
+    # Analysis settings
+    analysis_db_path: str = field(default_factory=lambda: os.environ.get("ANALYSIS_DB_PATH", "./data/earnings.db"))
+    max_tokens_per_analysis: int = 4096
+    analysis_temperature: float = 0.0
+
+    # Material change thresholds (%)
+    material_change_pct: float = 10.0
+    notable_change_pct: float = 5.0
+
     def get_output_path(self, company: str) -> str:
         """Get output directory for a company."""
         safe_name = "".join(c if c.isalnum() or c in " -_" else "_" for c in company)

@@ -26,9 +26,25 @@ This tool downloads earnings documents (transcripts, presentations, press releas
 ```
 earnings_downloader/
 ├── core/                    # Business logic (shared)
-│   ├── models.py           # EarningsCall Pydantic model, fuzzy matching, deduplication
-│   └── services/
-│       └── earnings.py     # EarningsService - main business logic
+│   ├── models.py           # Pydantic models (EarningsCall, CompanyAnalysis, etc.)
+│   ├── services/
+│   │   ├── earnings.py     # EarningsService - download business logic
+│   │   └── analysis.py     # AnalysisService - analysis business logic
+│   └── storage/
+│       ├── database.py     # SQLite setup and wrapper
+│       └── repositories.py # Data access (AnalysisRepo, IndustryRepo, etc.)
+├── analysis/                # Earnings analysis pipeline
+│   ├── extractor.py        # PDF text extraction (PyMuPDF + pdfplumber)
+│   ├── pipeline.py         # Analysis orchestrator (extract -> LLM -> store)
+│   ├── comparator.py       # QoQ/YoY comparison logic
+│   ├── llm/                # Multi-LLM client abstraction
+│   │   ├── base.py         # BaseLLMClient ABC
+│   │   ├── claude.py       # Anthropic Claude
+│   │   ├── openai_client.py # OpenAI
+│   │   └── gemini.py       # Google Gemini
+│   └── prompts/            # Prompt templates
+│       ├── metrics.py      # Financial metric extraction
+│       └── themes.py       # Theme identification + industry narrative
 ├── sources/                 # Data sources by region
 │   ├── base.py             # BaseSource ABC, Region enum, FiscalYearType enum
 │   ├── registry.py         # SourceRegistry for managing sources
@@ -41,14 +57,22 @@ earnings_downloader/
 │   ├── app.py              # Main app, mounts static files
 │   └── routes/
 │       ├── companies.py    # Search and regions endpoints
-│       └── downloads.py    # Documents list and ZIP download
+│       ├── downloads.py    # Documents list and ZIP download
+│       └── analysis.py     # Analysis + industry endpoints
 ├── cli/                     # CLI interface
 │   └── app.py              # Interactive CLI
 ├── web/                     # Frontend
-│   ├── index.html          # Search form, results table
-│   ├── app.js              # API calls, ZIP download handling
+│   ├── index.html          # Download page
+│   ├── analysis.html       # Company analysis page
+│   ├── industry.html       # Industry analysis page
+│   ├── app.js              # Download page JS
+│   ├── analysis.js         # Analysis page JS
+│   ├── industry.js         # Industry page JS
 │   └── style.css           # Styling
-├── config.py               # Configuration (API keys, timeouts)
+├── data/
+│   ├── industries.json     # Seed data for industry->company mappings
+│   └── earnings.db         # SQLite database (gitignored)
+├── config.py               # Configuration (API keys, LLM settings, timeouts)
 ├── downloader.py           # Async download manager
 └── utils.py                # Backwards-compatible exports
 ```
@@ -90,20 +114,46 @@ For India specifically:
 
 ### API Endpoints
 
+**Downloads:**
 - `GET /api/regions` - List available regions with their sources
 - `GET /api/companies/search?q=&region=` - Search companies by name
-- `GET /api/documents?company=&region=&count=&types=` - Get available documents (supports comma-separated companies)
-- `POST /api/downloads/zip` - Download all documents as ZIP file (streams to browser)
+- `GET /api/documents?company=&region=&count=&types=` - Get available documents
+- `POST /api/downloads/zip` - Download all documents as ZIP file
+
+**Analysis:**
+- `POST /api/analysis/analyze` - Trigger analysis for companies (body: `{companies, quarter, year, llm_provider}`)
+- `GET /api/analysis/results/{company}?quarter=&year=` - Get stored analysis
+- `GET /api/analysis/compare/{company}?quarter=&year=&type=qoq|yoy` - Quarter comparison
+- `GET /api/analysis/industries` - List all industries with companies
+- `POST /api/analysis/industries/{name}/analyze` - Run industry-level analysis
+- `PUT /api/analysis/industries/{name}/companies` - Update industry company list
+- `POST /api/analysis/industries/custom` - Create custom industry
 
 ### Environment Variables
 
-For East Asian sources that require API keys:
-
 ```bash
+# East Asian sources
 DART_API_KEY=your_dart_key      # Korea DART API
 TDNET_API_ID=your_id            # Japan J-Quants API
 TDNET_API_PASSWORD=your_pass    # Japan J-Quants API
+
+# LLM Configuration (for analysis features)
+LLM_PROVIDER=claude             # claude, openai, or gemini
+ANTHROPIC_API_KEY=              # For Claude
+OPENAI_API_KEY=                 # For OpenAI
+GOOGLE_API_KEY=                 # For Gemini
 ```
+
+### Analysis Pipeline
+
+The analysis pipeline (in `analysis/`) works as follows:
+1. **PDF Extraction**: Extract text from downloaded PDFs using PyMuPDF (transcripts) or pdfplumber (presentations/press releases with tables)
+2. **LLM Analysis**: Send extracted text to configured LLM for metric extraction and theme identification
+3. **Storage**: Results cached in SQLite (`data/earnings.db`) for instant retrieval
+4. **Comparison**: Pure Python QoQ/YoY comparison with configurable materiality thresholds
+5. **Industry Aggregation**: Cross-company theme aggregation and narrative generation via LLM
+
+All prompts are India-specific (INR Cr, FY convention). The LLM client abstraction supports Claude, OpenAI, and Gemini with a single `BaseLLMClient` interface.
 
 ### Deduplication Logic (core/models.py)
 

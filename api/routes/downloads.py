@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from core.services import EarningsService
 from core.models import EarningsCall
 from sources.base import Region
+from analysis.quarter_verify import verify_and_correct
 from config import config
 
 
@@ -92,16 +93,93 @@ async def get_documents(
     ]
 
 
-async def fetch_file(session: aiohttp.ClientSession, url: str, filename: str) -> tuple:
-    """Fetch a single file and return (filename, content) or (filename, None) on error."""
+class VerifyRequest(BaseModel):
+    """Request body for quarter verification."""
+    documents: List[DocumentResponse]
+
+
+class VerifiedDocument(BaseModel):
+    """Document with verified quarter info."""
+    company: str
+    quarter: str
+    year: str
+    doc_type: str
+    url: str
+    source: str
+    filename: str
+    verified: bool = False
+    was_corrected: bool = False
+    original_quarter: Optional[str] = None
+    original_year: Optional[str] = None
+
+
+@router.post("/documents/verify", response_model=List[VerifiedDocument])
+async def verify_quarters(request: VerifyRequest):
+    """
+    Verify quarter labels by reading the first 3 pages of each PDF.
+
+    Downloads each document, checks for explicit quarter mentions in
+    the content, and returns corrected labels where they differ.
+    """
+    async with aiohttp.ClientSession(
+        headers={"User-Agent": config.user_agent}
+    ) as session:
+        tasks = []
+        for doc in request.documents:
+            call = EarningsCall(
+                company=doc.company,
+                quarter=doc.quarter,
+                year=doc.year,
+                doc_type=doc.doc_type,
+                url=doc.url,
+                source=doc.source,
+            )
+            tasks.append(fetch_file(session, doc.url, call))
+        results = await asyncio.gather(*tasks)
+
+    verified = []
+    for doc, content in results:
+        if content:
+            corrected, was_corrected, was_verified = verify_and_correct(doc, content)
+            verified.append(VerifiedDocument(
+                company=corrected.company,
+                quarter=corrected.quarter,
+                year=corrected.year,
+                doc_type=corrected.doc_type,
+                url=corrected.url,
+                source=corrected.source,
+                filename=corrected.get_filename(),
+                verified=was_verified,
+                was_corrected=was_corrected,
+                original_quarter=doc.quarter if was_corrected else None,
+                original_year=doc.year if was_corrected else None,
+            ))
+        else:
+            # Could not fetch PDF at all
+            verified.append(VerifiedDocument(
+                company=doc.company,
+                quarter=doc.quarter,
+                year=doc.year,
+                doc_type=doc.doc_type,
+                url=doc.url,
+                source=doc.source,
+                filename=doc.get_filename(),
+                verified=False,
+            ))
+
+    return verified
+
+
+async def fetch_file(session: aiohttp.ClientSession, url: str, doc: EarningsCall) -> tuple:
+    """Fetch a single file and return (doc, content) or (doc, None) on error."""
     try:
         async with session.get(url, timeout=aiohttp.ClientTimeout(total=30)) as resp:
             if resp.status == 200:
                 content = await resp.read()
-                return (filename, content)
+                return (doc, content)
     except Exception as e:
         print(f"  Error fetching {url}: {e}")
-    return (filename, None)
+    return (doc, None)
 
 
 @router.post("/downloads/zip")
@@ -142,17 +220,18 @@ async def download_as_zip(request: DownloadRequest):
         headers={"User-Agent": config.user_agent}
     ) as session:
         tasks = [
-            fetch_file(session, doc.url, doc.get_filename())
+            fetch_file(session, doc.url, doc)
             for doc in all_documents
         ]
         results = await asyncio.gather(*tasks)
 
-    # Create ZIP in memory
+    # Create ZIP in memory, verifying quarters from PDF content
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for filename, content in results:
+        for doc, content in results:
             if content:
-                zf.writestr(filename, content)
+                corrected_doc, _, _ = verify_and_correct(doc, content)
+                zf.writestr(corrected_doc.get_filename(), content)
 
     zip_buffer.seek(0)
 
