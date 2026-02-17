@@ -51,7 +51,7 @@ class CompanyIRSource(BaseSource):
     region = Region.INDIA
     fiscal_year_type = FiscalYearType.INDIAN
     source_name = "company_ir"
-    priority = 1  # Secondary - for factsheets not found in exchange filings
+    priority = 2  # Tertiary - for factsheets not found in exchange filings
 
     def __init__(self):
         self.session = requests.Session()

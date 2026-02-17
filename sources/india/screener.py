@@ -19,7 +19,7 @@ class ScreenerSource(BaseSource):
     region = Region.INDIA
     fiscal_year_type = FiscalYearType.INDIAN
     source_name = "screener"
-    priority = 0  # Primary source - links to BSE/NSE filings
+    priority = 1  # Aggregator - links to BSE/NSE filings
 
     BASE_URL = "https://www.screener.in"
     SEARCH_URL = "https://www.screener.in/api/company/search/"

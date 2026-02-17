@@ -4,7 +4,7 @@ from .base import BaseSource, Region, FiscalYearType
 from .registry import SourceRegistry
 
 # Import regional sources (auto-registers them)
-from .india import ScreenerSource, CompanyIRSource
+from .india import BSESource, NSESource, ScreenerSource, CompanyIRSource
 from .us import EdgarSource
 from .japan import TdnetSource
 from .korea import DartSource
@@ -15,6 +15,8 @@ __all__ = [
     "Region",
     "FiscalYearType",
     "SourceRegistry",
+    "BSESource",
+    "NSESource",
     "ScreenerSource",
     "CompanyIRSource",
     "EdgarSource",
