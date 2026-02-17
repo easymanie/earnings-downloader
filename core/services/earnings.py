@@ -46,6 +46,37 @@ class EarningsService:
 
         return results
 
+    def suggest_companies(
+        self,
+        query: str,
+        region: Optional[Region] = None,
+        limit: int = 8
+    ) -> List[dict]:
+        """
+        Get company name suggestions for autocomplete.
+
+        Aggregates suggestions from all sources, deduplicates by name.
+        """
+        if region:
+            sources = SourceRegistry.get_sources(region)
+        else:
+            sources = SourceRegistry.get_all_sources()
+
+        seen_names = set()
+        suggestions = []
+        for source in sources:
+            try:
+                results = source.suggest_companies(query, limit=limit)
+                for item in results:
+                    name_lower = item["name"].lower()
+                    if name_lower not in seen_names:
+                        seen_names.add(name_lower)
+                        suggestions.append(item)
+            except Exception as e:
+                print(f"  Suggest error from {source.source_name}: {e}")
+
+        return suggestions[:limit]
+
     def get_earnings_documents(
         self,
         company_name: str,

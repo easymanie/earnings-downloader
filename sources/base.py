@@ -43,6 +43,19 @@ class BaseSource(ABC):
         """
         pass
 
+    def suggest_companies(self, query: str, limit: int = 8) -> List[dict]:
+        """
+        Return multiple company name suggestions for autocomplete.
+
+        Args:
+            query: Partial company name
+            limit: Max results to return
+
+        Returns:
+            List of dicts with name, source, region keys
+        """
+        return []
+
     @abstractmethod
     def get_earnings_calls(
         self,

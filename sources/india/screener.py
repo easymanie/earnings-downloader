@@ -59,6 +59,31 @@ class ScreenerSource(BaseSource):
             print(f"  Search error: {e}")
             return None
 
+    def suggest_companies(self, query: str, limit: int = 8) -> list[dict]:
+        """Return multiple company suggestions from Screener.in search API."""
+        normalized = normalize_company_name(query)
+        try:
+            resp = self.session.get(
+                self.SEARCH_URL,
+                params={"q": normalized},
+                timeout=config.request_timeout
+            )
+            resp.raise_for_status()
+            results = resp.json()
+
+            suggestions = []
+            for item in results[:limit]:
+                suggestions.append({
+                    "name": item.get("name", ""),
+                    "source": self.source_name,
+                    "region": self.region.value
+                })
+            return suggestions
+
+        except Exception as e:
+            print(f"  Suggest error: {e}")
+            return []
+
     def get_earnings_calls(
         self,
         company_name: str,

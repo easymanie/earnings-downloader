@@ -49,6 +49,30 @@ async def search_companies(
     return results
 
 
+class CompanySuggestion(BaseModel):
+    """Company autocomplete suggestion."""
+    name: str
+    source: str
+    region: str
+
+
+@router.get("/suggest", response_model=List[CompanySuggestion])
+async def suggest_companies(
+    q: str = Query(..., min_length=2, description="Partial company name"),
+    region: Optional[str] = Query(None, description="Region to search in"),
+    limit: int = Query(8, ge=1, le=20, description="Max suggestions")
+):
+    """Return company name suggestions for autocomplete."""
+    region_enum = None
+    if region:
+        try:
+            region_enum = Region(region.lower())
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid region: {region}")
+
+    return service.suggest_companies(q, region=region_enum, limit=limit)
+
+
 @router.get("/regions", response_model=List[RegionInfo])
 async def list_regions():
     """

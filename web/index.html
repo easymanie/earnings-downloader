@@ -22,7 +22,10 @@
             <form id="search-form">
                 <div class="form-group">
                     <label for="company">Company Name(s)</label>
-                    <input type="text" id="company" name="company" placeholder="e.g., Infosys, TCS, Reliance (comma-separated)" required>
+                    <div class="autocomplete-wrapper">
+                        <input type="text" id="company" name="company" placeholder="e.g., Infosys, TCS, Reliance (comma-separated)" required autocomplete="off">
+                        <div id="autocomplete-dropdown" class="autocomplete-dropdown hidden"></div>
+                    </div>
                     <small style="color: #666; font-size: 0.85rem;">Separate multiple companies with commas</small>
                 </div>
 

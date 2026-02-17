@@ -9,7 +9,7 @@ from collections import defaultdict
 
 from ..base import BaseSource, Region, FiscalYearType
 from ..registry import SourceRegistry
-from core.models import EarningsCall, normalize_company_name, find_best_company_match
+from core.models import EarningsCall, normalize_company_name, find_best_company_match, fuzzy_match_company
 from config import config
 
 
@@ -88,6 +88,20 @@ class CompanyIRSource(BaseSource):
             return KNOWN_IR_PAGES[best_match]
 
         return None
+
+    def suggest_companies(self, query: str, limit: int = 8) -> list[dict]:
+        """Return company suggestions from known IR pages using fuzzy matching."""
+        candidates = list(KNOWN_IR_PAGES.keys())
+        matches = fuzzy_match_company(query, candidates, threshold=50)
+
+        suggestions = []
+        for name, score in matches[:limit]:
+            suggestions.append({
+                "name": name.title(),
+                "source": self.source_name,
+                "region": self.region.value
+            })
+        return suggestions
 
     def _extract_quarter_from_text(self, text: str) -> Tuple[str, str]:
         """Extract quarter and year from text."""

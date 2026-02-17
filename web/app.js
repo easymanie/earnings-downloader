@@ -15,9 +15,117 @@ const downloadStatus = document.getElementById('download-status');
 const statusMessage = document.getElementById('status-message');
 const searchBtn = document.getElementById('search-btn');
 
+// Autocomplete elements
+const companyInput = document.getElementById('company');
+const autocompleteDropdown = document.getElementById('autocomplete-dropdown');
+let autocompleteTimer = null;
+let activeIndex = -1;
+
 // Event Listeners
 searchForm.addEventListener('submit', handleSearch);
 downloadAllBtn.addEventListener('click', handleDownloadAll);
+
+// --- Autocomplete ---
+
+companyInput.addEventListener('input', () => {
+    clearTimeout(autocompleteTimer);
+    const raw = companyInput.value;
+    const lastComma = raw.lastIndexOf(',');
+    const currentToken = (lastComma >= 0 ? raw.slice(lastComma + 1) : raw).trim();
+
+    if (currentToken.length < 2) {
+        closeAutocomplete();
+        return;
+    }
+
+    autocompleteTimer = setTimeout(() => fetchSuggestions(currentToken), 300);
+});
+
+companyInput.addEventListener('keydown', (e) => {
+    if (autocompleteDropdown.classList.contains('hidden')) return;
+
+    const items = autocompleteDropdown.querySelectorAll('.autocomplete-item');
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activeIndex = Math.min(activeIndex + 1, items.length - 1);
+        highlightItem(items);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeIndex = Math.max(activeIndex - 1, 0);
+        highlightItem(items);
+    } else if (e.key === 'Enter' && activeIndex >= 0) {
+        e.preventDefault();
+        selectSuggestion(items[activeIndex].dataset.name);
+    } else if (e.key === 'Escape') {
+        closeAutocomplete();
+    }
+});
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.autocomplete-wrapper')) {
+        closeAutocomplete();
+    }
+});
+
+async function fetchSuggestions(query) {
+    const region = document.getElementById('region').value;
+    try {
+        const params = new URLSearchParams({ q: query, region, limit: '8' });
+        const resp = await fetch(`${API_BASE}/api/companies/suggest?${params}`);
+        if (!resp.ok) return;
+        const suggestions = await resp.json();
+        renderSuggestions(suggestions);
+    } catch (err) {
+        console.error('Suggest error:', err);
+    }
+}
+
+function renderSuggestions(suggestions) {
+    if (suggestions.length === 0) {
+        closeAutocomplete();
+        return;
+    }
+
+    activeIndex = -1;
+    autocompleteDropdown.innerHTML = suggestions.map((s, i) =>
+        `<div class="autocomplete-item" data-name="${escapeHtml(s.name)}">${escapeHtml(s.name)}<span class="source-tag">${escapeHtml(s.source)}</span></div>`
+    ).join('');
+    autocompleteDropdown.classList.remove('hidden');
+
+    autocompleteDropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+        item.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            selectSuggestion(item.dataset.name);
+        });
+    });
+}
+
+function selectSuggestion(name) {
+    const raw = companyInput.value;
+    const lastComma = raw.lastIndexOf(',');
+    if (lastComma >= 0) {
+        companyInput.value = raw.slice(0, lastComma + 1) + ' ' + name;
+    } else {
+        companyInput.value = name;
+    }
+    closeAutocomplete();
+    companyInput.focus();
+}
+
+function highlightItem(items) {
+    items.forEach((item, i) => {
+        item.classList.toggle('active', i === activeIndex);
+    });
+    if (activeIndex >= 0 && items[activeIndex]) {
+        items[activeIndex].scrollIntoView({ block: 'nearest' });
+    }
+}
+
+function closeAutocomplete() {
+    autocompleteDropdown.classList.add('hidden');
+    autocompleteDropdown.innerHTML = '';
+    activeIndex = -1;
+}
 
 async function handleSearch(e) {
     e.preventDefault();
