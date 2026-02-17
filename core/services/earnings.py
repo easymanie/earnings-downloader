@@ -53,7 +53,11 @@ class EarningsService:
         count: int = 5,
         include_transcripts: bool = True,
         include_presentations: bool = True,
-        include_press_releases: bool = True
+        include_press_releases: bool = True,
+        include_balance_sheets: bool = True,
+        include_pnl: bool = True,
+        include_cash_flow: bool = True,
+        include_annual_reports: bool = True
     ) -> List[EarningsCall]:
         """
         Get earnings documents from all sources for a company.
@@ -65,6 +69,10 @@ class EarningsService:
             include_transcripts: Include earnings call transcripts
             include_presentations: Include investor presentations
             include_press_releases: Include press releases/fact sheets
+            include_balance_sheets: Include balance sheet documents
+            include_pnl: Include P&L / income statement documents
+            include_cash_flow: Include cash flow statement documents
+            include_annual_reports: Include annual reports
 
         Returns:
             Deduplicated list of EarningsCall objects
@@ -83,7 +91,11 @@ class EarningsService:
                     count,
                     include_transcripts=include_transcripts,
                     include_presentations=include_presentations,
-                    include_press_releases=include_press_releases
+                    include_press_releases=include_press_releases,
+                    include_balance_sheets=include_balance_sheets,
+                    include_pnl=include_pnl,
+                    include_cash_flow=include_cash_flow,
+                    include_annual_reports=include_annual_reports
                 )
                 all_calls.extend(calls)
             except Exception as e:

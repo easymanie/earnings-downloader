@@ -65,7 +65,11 @@ class ScreenerSource(BaseSource):
         count: int = 5,
         include_transcripts: bool = True,
         include_presentations: bool = True,
-        include_press_releases: bool = True
+        include_press_releases: bool = True,
+        include_balance_sheets: bool = True,
+        include_pnl: bool = True,
+        include_cash_flow: bool = True,
+        include_annual_reports: bool = True
     ) -> List[EarningsCall]:
         """Get earnings call documents for a company."""
         calls = []
@@ -98,7 +102,11 @@ class ScreenerSource(BaseSource):
                 doc_section, actual_name,
                 include_transcripts=include_transcripts,
                 include_presentations=include_presentations,
-                include_press_releases=include_press_releases
+                include_press_releases=include_press_releases,
+                include_balance_sheets=include_balance_sheets,
+                include_pnl=include_pnl,
+                include_cash_flow=include_cash_flow,
+                include_annual_reports=include_annual_reports
             )
             calls.extend(entries)
 
@@ -134,7 +142,11 @@ class ScreenerSource(BaseSource):
         company_name: str,
         include_transcripts: bool = True,
         include_presentations: bool = True,
-        include_press_releases: bool = True
+        include_press_releases: bool = True,
+        include_balance_sheets: bool = True,
+        include_pnl: bool = True,
+        include_cash_flow: bool = True,
+        include_annual_reports: bool = True
     ) -> List[EarningsCall]:
         """Parse earnings call entries from section."""
         calls = []
@@ -243,6 +255,44 @@ class ScreenerSource(BaseSource):
                 if is_pdf and (is_factsheet or (is_press_release and is_official_source)):
                     context = parent.get_text(" ", strip=True) if parent else text
                     add_call(link.get("href", ""), context, "press_release")
+
+        # Financial statement document types
+        if include_balance_sheets or include_pnl or include_cash_flow or include_annual_reports:
+            all_links = section.find_all("a", href=True)
+            for link in all_links:
+                text = link.get_text(strip=True).lower()
+                href = link.get("href", "").lower()
+
+                is_pdf = ".pdf" in href
+                if not is_pdf:
+                    continue
+
+                parent = link.find_parent("li") or link.find_parent("div")
+                context = parent.get_text(" ", strip=True) if parent else text
+
+                if include_balance_sheets and any(kw in text or kw in href for kw in [
+                    "balance sheet", "statement of financial position",
+                    "assets and liabilities"
+                ]):
+                    add_call(link.get("href", ""), context, "balance_sheet")
+
+                elif include_pnl and any(kw in text or kw in href for kw in [
+                    "profit and loss", "profit & loss", "p&l",
+                    "income statement", "statement of profit",
+                    "standalone results", "consolidated results",
+                    "financial results"
+                ]):
+                    add_call(link.get("href", ""), context, "pnl")
+
+                elif include_cash_flow and any(kw in text or kw in href for kw in [
+                    "cash flow", "cashflow", "cash-flow"
+                ]):
+                    add_call(link.get("href", ""), context, "cash_flow")
+
+                elif include_annual_reports and any(kw in text or kw in href for kw in [
+                    "annual report", "integrated report"
+                ]):
+                    add_call(link.get("href", ""), context, "annual_report")
 
         return calls
 

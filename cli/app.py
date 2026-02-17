@@ -109,7 +109,11 @@ def search_and_download(
     region: Optional[Region] = None,
     include_transcripts: bool = True,
     include_presentations: bool = True,
-    include_press_releases: bool = True
+    include_press_releases: bool = True,
+    include_balance_sheets: bool = True,
+    include_pnl: bool = True,
+    include_cash_flow: bool = True,
+    include_annual_reports: bool = True
 ):
     """Search for companies and download their earnings documents."""
     downloader = Downloader()
@@ -127,7 +131,11 @@ def search_and_download(
             count=config.quarters_per_company,
             include_transcripts=include_transcripts,
             include_presentations=include_presentations,
-            include_press_releases=include_press_releases
+            include_press_releases=include_press_releases,
+            include_balance_sheets=include_balance_sheets,
+            include_pnl=include_pnl,
+            include_cash_flow=include_cash_flow,
+            include_annual_reports=include_annual_reports
         )
 
         if calls:

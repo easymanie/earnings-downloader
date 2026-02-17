@@ -40,6 +40,10 @@ class DownloadRequest(BaseModel):
     include_transcripts: bool = True
     include_presentations: bool = True
     include_press_releases: bool = True
+    include_balance_sheets: bool = True
+    include_pnl: bool = True
+    include_cash_flow: bool = True
+    include_annual_reports: bool = True
 
 
 @router.get("/documents", response_model=List[DocumentResponse])
@@ -48,7 +52,7 @@ async def get_documents(
     region: Optional[str] = Query("india", description="Region (india, us, japan, korea, china)"),
     count: int = Query(8, ge=1, le=40, description="Number of quarters per company (max 40 = 10 years)"),
     types: Optional[str] = Query(
-        "transcript,presentation,press_release",
+        "transcript,presentation,press_release,balance_sheet,pnl,cash_flow,annual_report",
         description="Document types (comma-separated)"
     )
 ):
@@ -75,7 +79,11 @@ async def get_documents(
             count=count,
             include_transcripts="transcript" in doc_types,
             include_presentations="presentation" in doc_types,
-            include_press_releases="press_release" in doc_types
+            include_press_releases="press_release" in doc_types,
+            include_balance_sheets="balance_sheet" in doc_types,
+            include_pnl="pnl" in doc_types,
+            include_cash_flow="cash_flow" in doc_types,
+            include_annual_reports="annual_report" in doc_types
         )
         all_documents.extend(documents)
 
@@ -208,7 +216,11 @@ async def download_as_zip(request: DownloadRequest):
             count=request.count,
             include_transcripts=request.include_transcripts,
             include_presentations=request.include_presentations,
-            include_press_releases=request.include_press_releases
+            include_press_releases=request.include_press_releases,
+            include_balance_sheets=request.include_balance_sheets,
+            include_pnl=request.include_pnl,
+            include_cash_flow=request.include_cash_flow,
+            include_annual_reports=request.include_annual_reports
         )
         all_documents.extend(documents)
 

@@ -136,7 +136,11 @@ class CompanyIRSource(BaseSource):
         count: int = 5,
         include_transcripts: bool = True,
         include_presentations: bool = True,
-        include_press_releases: bool = True
+        include_press_releases: bool = True,
+        include_balance_sheets: bool = True,
+        include_pnl: bool = True,
+        include_cash_flow: bool = True,
+        include_annual_reports: bool = True
     ) -> List[EarningsCall]:
         """Get earnings call documents from company IR website."""
         calls = []
@@ -191,6 +195,26 @@ class CompanyIRSource(BaseSource):
                     ".pdf" in href.lower() or is_factsheet
                 )
 
+                is_balance_sheet = any(kw in text or kw in href.lower() for kw in [
+                    "balance sheet", "statement of financial position",
+                    "assets and liabilities"
+                ])
+
+                is_pnl = any(kw in text or kw in href.lower() for kw in [
+                    "profit and loss", "profit & loss", "p&l",
+                    "income statement", "statement of profit",
+                    "standalone results", "consolidated results",
+                    "financial results"
+                ])
+
+                is_cash_flow = any(kw in text or kw in href.lower() for kw in [
+                    "cash flow", "cashflow", "cash-flow"
+                ])
+
+                is_annual_report = any(kw in text or kw in href.lower() for kw in [
+                    "annual report", "integrated report"
+                ])
+
                 doc_type = None
                 if is_transcript and include_transcripts:
                     doc_type = "transcript"
@@ -198,6 +222,14 @@ class CompanyIRSource(BaseSource):
                     doc_type = "presentation"
                 elif is_press_release and include_press_releases:
                     doc_type = "press_release"
+                elif is_balance_sheet and include_balance_sheets and ".pdf" in href.lower():
+                    doc_type = "balance_sheet"
+                elif is_pnl and include_pnl and ".pdf" in href.lower():
+                    doc_type = "pnl"
+                elif is_cash_flow and include_cash_flow and ".pdf" in href.lower():
+                    doc_type = "cash_flow"
+                elif is_annual_report and include_annual_reports and ".pdf" in href.lower():
+                    doc_type = "annual_report"
 
                 if not doc_type:
                     continue

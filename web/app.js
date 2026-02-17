@@ -219,7 +219,11 @@ async function handleDownloadAll() {
                 count: parseInt(document.getElementById('count').value),
                 include_transcripts: types.includes('transcript'),
                 include_presentations: types.includes('presentation'),
-                include_press_releases: types.includes('press_release')
+                include_press_releases: types.includes('press_release'),
+                include_balance_sheets: types.includes('balance_sheet'),
+                include_pnl: types.includes('pnl'),
+                include_cash_flow: types.includes('cash_flow'),
+                include_annual_reports: types.includes('annual_report')
             })
         });
 
@@ -272,7 +276,11 @@ function formatDocType(docType) {
     const labels = {
         'transcript': 'Transcript',
         'presentation': 'Presentation',
-        'press_release': 'Press Release'
+        'press_release': 'Press Release',
+        'balance_sheet': 'Balance Sheet',
+        'pnl': 'P&L Statement',
+        'cash_flow': 'Cash Flow',
+        'annual_report': 'Annual Report'
     };
     return labels[docType] || docType;
 }

@@ -97,7 +97,11 @@ class EdgarSource(BaseSource):
         count: int = 5,
         include_transcripts: bool = True,
         include_presentations: bool = True,
-        include_press_releases: bool = True
+        include_press_releases: bool = True,
+        include_balance_sheets: bool = True,
+        include_pnl: bool = True,
+        include_cash_flow: bool = True,
+        include_annual_reports: bool = True
     ) -> List[EarningsCall]:
         """
         Get earnings documents from SEC EDGAR.
@@ -105,8 +109,8 @@ class EdgarSource(BaseSource):
         Note: SEC EDGAR contains official filings (10-Q, 10-K, 8-K) but NOT
         earnings call transcripts. Those require third-party services.
 
-        - 10-Q: Quarterly reports (similar to transcripts in info content)
-        - 10-K: Annual reports
+        - 10-Q: Quarterly reports (contains P&L and financial statements)
+        - 10-K: Annual reports (contains all financial statements)
         - 8-K: Current reports (press releases, material events)
         """
         calls = []
@@ -133,25 +137,30 @@ class EdgarSource(BaseSource):
             accessions = filings.get("accessionNumber", [])
             primary_docs = filings.get("primaryDocument", [])
 
-            # Filter to relevant forms
-            relevant_forms = {
-                "10-Q": "transcript",      # Quarterly report
-                "10-K": "presentation",    # Annual report (treated as presentation)
-                "8-K": "press_release",    # Current report (press releases)
+            # Map forms to doc types they should produce
+            # Each form can generate multiple doc type entries
+            form_doc_types = {
+                "10-Q": [],  # Built dynamically based on include flags
+                "10-K": [],
+                "8-K": [],
             }
+            if include_transcripts:
+                form_doc_types["10-Q"].append("transcript")
+            if include_presentations:
+                form_doc_types["10-K"].append("presentation")
+            if include_press_releases:
+                form_doc_types["8-K"].append("press_release")
+            if include_pnl:
+                form_doc_types["10-Q"].append("pnl")
+            if include_annual_reports:
+                form_doc_types["10-K"].append("annual_report")
 
             for i, form in enumerate(forms):
-                if form not in relevant_forms:
+                if form not in form_doc_types:
                     continue
 
-                doc_type = relevant_forms[form]
-
-                # Check if we should include this type
-                if doc_type == "transcript" and not include_transcripts:
-                    continue
-                if doc_type == "presentation" and not include_presentations:
-                    continue
-                if doc_type == "press_release" and not include_press_releases:
+                doc_types_for_form = form_doc_types[form]
+                if not doc_types_for_form:
                     continue
 
                 # Parse date to quarter
@@ -168,14 +177,15 @@ class EdgarSource(BaseSource):
                 if accession and primary_doc:
                     doc_url = f"https://www.sec.gov/Archives/edgar/data/{cik.lstrip('0')}/{accession}/{primary_doc}"
 
-                    calls.append(EarningsCall(
-                        company=actual_name,
-                        quarter=quarter,
-                        year=year,
-                        doc_type=doc_type,
-                        url=doc_url,
-                        source=self.source_name
-                    ))
+                    for doc_type in doc_types_for_form:
+                        calls.append(EarningsCall(
+                            company=actual_name,
+                            quarter=quarter,
+                            year=year,
+                            doc_type=doc_type,
+                            url=doc_url,
+                            source=self.source_name
+                        ))
 
         except Exception as e:
             print(f"  Error fetching from SEC EDGAR: {e}")

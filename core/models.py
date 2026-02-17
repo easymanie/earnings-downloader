@@ -135,7 +135,7 @@ class EarningsCall(BaseModel):
     company: str = Field(..., description="Company name")
     quarter: str = Field(..., description="Quarter (e.g., 'Q3', 'Q4')")
     year: str = Field(..., description="Fiscal year (e.g., 'FY26', '2025')")
-    doc_type: str = Field(..., description="Document type: transcript, presentation, press_release")
+    doc_type: str = Field(..., description="Document type: transcript, presentation, press_release, balance_sheet, pnl, cash_flow, annual_report")
     url: str = Field(..., description="Download URL")
     source: str = Field(..., description="Source name: screener, company_ir, edgar, etc.")
     date: Optional[datetime] = Field(None, description="Document date if available")

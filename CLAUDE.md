@@ -19,7 +19,7 @@ No tests exist yet. No build step required.
 
 ## Architecture
 
-This tool downloads earnings documents (transcripts, presentations, press releases/factsheets) for companies worldwide.
+This tool downloads earnings documents (transcripts, presentations, press releases/factsheets, balance sheets, P&L statements, cash flow statements, annual reports) for companies worldwide.
 
 ### Project Structure
 
