@@ -87,9 +87,10 @@ function renderSuggestions(suggestions) {
     }
 
     activeIndex = -1;
-    autocompleteDropdown.innerHTML = suggestions.map((s, i) =>
-        `<div class="autocomplete-item" data-name="${escapeHtml(s.name)}">${escapeHtml(s.name)}<span class="source-tag">${escapeHtml(s.source)}</span></div>`
-    ).join('');
+    autocompleteDropdown.innerHTML = suggestions.map((s, i) => {
+        const aliasLabel = s.alias ? `<span class="alias-tag">(${escapeHtml(s.alias)})</span>` : '';
+        return `<div class="autocomplete-item" data-name="${escapeHtml(s.name)}">${escapeHtml(s.name)}${aliasLabel}<span class="source-tag">${escapeHtml(s.source)}</span></div>`;
+    }).join('');
     autocompleteDropdown.classList.remove('hidden');
 
     autocompleteDropdown.querySelectorAll('.autocomplete-item').forEach(item => {

@@ -54,6 +54,7 @@ class CompanySuggestion(BaseModel):
     name: str
     source: str
     region: str
+    alias: Optional[str] = None
 
 
 @router.get("/suggest", response_model=List[CompanySuggestion])

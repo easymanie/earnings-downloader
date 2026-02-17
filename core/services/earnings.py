@@ -1,6 +1,8 @@
 """Earnings document service - shared business logic for CLI and API."""
 
-from typing import List, Optional
+import json
+import os
+from typing import List, Optional, Tuple
 
 from sources import SourceRegistry
 from sources.base import Region
@@ -18,6 +20,37 @@ class EarningsService:
         import sources.korea  # noqa: F401
         import sources.china  # noqa: F401
 
+        # Load company aliases
+        self._aliases = {}
+        aliases_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "company_aliases.json")
+        aliases_path = os.path.normpath(aliases_path)
+        try:
+            with open(aliases_path, "r") as f:
+                self._aliases = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            print(f"  Warning: Could not load company aliases: {e}")
+
+    def _resolve_alias(self, query: str) -> Tuple[str, Optional[str]]:
+        """
+        Check if query matches a company alias.
+
+        Returns:
+            (canonical_name, matched_alias) if alias found,
+            (original_query, None) if no alias match.
+        """
+        normalized = query.strip().lower()
+
+        # Exact match
+        if normalized in self._aliases:
+            return self._aliases[normalized], query.strip()
+
+        # Partial match: check if query is a prefix of any alias
+        for alias, canonical in self._aliases.items():
+            if alias.startswith(normalized) and len(normalized) >= 3:
+                return canonical, alias
+
+        return query, None
+
     def search_company(
         self,
         query: str,
@@ -33,6 +66,8 @@ class EarningsService:
         Returns:
             List of company info dicts with name, url, source, region
         """
+        resolved, _ = self._resolve_alias(query)
+
         if region:
             sources = SourceRegistry.get_sources(region)
         else:
@@ -40,7 +75,7 @@ class EarningsService:
 
         results = []
         for source in sources:
-            result = source.search_company(query)
+            result = source.search_company(resolved)
             if result:
                 results.append(result)
 
@@ -56,7 +91,10 @@ class EarningsService:
         Get company name suggestions for autocomplete.
 
         Aggregates suggestions from all sources, deduplicates by name.
+        Resolves aliases so brand names find official listed companies.
         """
+        resolved, matched_alias = self._resolve_alias(query)
+
         if region:
             sources = SourceRegistry.get_sources(region)
         else:
@@ -64,6 +102,22 @@ class EarningsService:
 
         seen_names = set()
         suggestions = []
+
+        # If alias was resolved, search for canonical name first
+        if matched_alias:
+            for source in sources:
+                try:
+                    results = source.suggest_companies(resolved, limit=limit)
+                    for item in results:
+                        name_lower = item["name"].lower()
+                        if name_lower not in seen_names:
+                            seen_names.add(name_lower)
+                            item["alias"] = matched_alias
+                            suggestions.append(item)
+                except Exception as e:
+                    print(f"  Suggest error from {source.source_name}: {e}")
+
+        # Also search with original query (covers non-alias and partial matches)
         for source in sources:
             try:
                 results = source.suggest_companies(query, limit=limit)
@@ -108,6 +162,9 @@ class EarningsService:
         Returns:
             Deduplicated list of EarningsCall objects
         """
+        # Resolve alias before searching
+        resolved, _ = self._resolve_alias(company_name)
+
         all_calls: List[EarningsCall] = []
 
         if region:
@@ -118,7 +175,7 @@ class EarningsService:
         for source in sources:
             try:
                 calls = source.get_earnings_calls(
-                    company_name,
+                    resolved,
                     count,
                     include_transcripts=include_transcripts,
                     include_presentations=include_presentations,

@@ -618,6 +618,13 @@ tr:hover {
     margin-left: 8px;
 }
 
+.autocomplete-item .alias-tag {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-left: 6px;
+    font-style: italic;
+}
+
 footer {
     text-align: center;
     margin-top: 30px;
