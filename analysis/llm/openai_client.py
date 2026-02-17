@@ -7,8 +7,8 @@ from .base import BaseLLMClient, LLMResponse
 class OpenAILLMClient(BaseLLMClient):
     provider_name = "openai"
 
-    def __init__(self, api_key: str, model: str = "gpt-4o"):
-        self.client = openai.OpenAI(api_key=api_key)
+    def __init__(self, api_key: str, model: str = "gpt-4o", base_url: str = None):
+        self.client = openai.OpenAI(api_key=api_key, base_url=base_url) if base_url else openai.OpenAI(api_key=api_key)
         self.model = model
 
     def complete(

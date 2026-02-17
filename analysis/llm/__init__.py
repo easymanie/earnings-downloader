@@ -33,5 +33,14 @@ def get_llm_client(provider: Optional[str] = None) -> BaseLLMClient:
     elif provider == "ollama":
         from .ollama import OllamaLLMClient
         return OllamaLLMClient(model=config.ollama_model, base_url=config.ollama_url)
+    elif provider == "openrouter":
+        from .openai_client import OpenAILLMClient
+        if not config.openrouter_api_key:
+            raise ValueError("OPENROUTER_API_KEY environment variable not set")
+        return OpenAILLMClient(
+            api_key=config.openrouter_api_key,
+            model=config.openrouter_model,
+            base_url="https://openrouter.ai/api/v1"
+        )
     else:
-        raise ValueError(f"Unknown LLM provider: {provider}. Use 'claude', 'openai', 'gemini', or 'ollama'.")
+        raise ValueError(f"Unknown LLM provider: {provider}. Use 'claude', 'openai', 'gemini', 'ollama', or 'openrouter'.")
