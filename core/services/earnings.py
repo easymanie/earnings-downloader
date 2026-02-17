@@ -103,8 +103,8 @@ class EarningsService:
         seen_names = set()
         suggestions = []
 
-        # If alias was resolved, search for canonical name first
         if matched_alias:
+            # Alias resolved — only search for canonical name, skip original query
             for source in sources:
                 try:
                     results = source.suggest_companies(resolved, limit=limit)
@@ -116,18 +116,18 @@ class EarningsService:
                             suggestions.append(item)
                 except Exception as e:
                     print(f"  Suggest error from {source.source_name}: {e}")
-
-        # Also search with original query (covers non-alias and partial matches)
-        for source in sources:
-            try:
-                results = source.suggest_companies(query, limit=limit)
-                for item in results:
-                    name_lower = item["name"].lower()
-                    if name_lower not in seen_names:
-                        seen_names.add(name_lower)
-                        suggestions.append(item)
-            except Exception as e:
-                print(f"  Suggest error from {source.source_name}: {e}")
+        else:
+            # No alias — search with original query
+            for source in sources:
+                try:
+                    results = source.suggest_companies(query, limit=limit)
+                    for item in results:
+                        name_lower = item["name"].lower()
+                        if name_lower not in seen_names:
+                            seen_names.add(name_lower)
+                            suggestions.append(item)
+                except Exception as e:
+                    print(f"  Suggest error from {source.source_name}: {e}")
 
         return suggestions[:limit]
 
