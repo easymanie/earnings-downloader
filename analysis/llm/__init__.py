@@ -40,7 +40,8 @@ def get_llm_client(provider: Optional[str] = None) -> BaseLLMClient:
         return OpenAILLMClient(
             api_key=config.openrouter_api_key,
             model=config.openrouter_model,
-            base_url="https://openrouter.ai/api/v1"
+            base_url="https://openrouter.ai/api/v1",
+            json_mode=False,
         )
     else:
         raise ValueError(f"Unknown LLM provider: {provider}. Use 'claude', 'openai', 'gemini', 'ollama', or 'openrouter'.")

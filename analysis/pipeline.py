@@ -193,10 +193,7 @@ class AnalysisPipeline:
             quarters_analyzed=[f"{a.quarter} {a.year}" for a in analyses_recent_first],
             quarter_analyses=analyses_recent_first,
             current_quarter_summary=trend_data.get("current_quarter_summary", ""),
-            metric_trends=[
-                MetricTrend(**t) if isinstance(t, dict) else MetricTrend(metric=str(t))
-                for t in trend_data.get("metric_trends", [])
-            ],
+            metric_trends=self._parse_metric_trends(trend_data.get("metric_trends", [])),
             persistent_themes=trend_data.get("persistent_themes", []),
             emerging_themes=trend_data.get("emerging_themes", []),
             fading_themes=trend_data.get("fading_themes", []),
@@ -204,6 +201,20 @@ class AnalysisPipeline:
             consistency_assessment=trend_data.get("consistency_assessment", ""),
             analyzed_at=datetime.now(),
         )
+
+    @staticmethod
+    def _parse_metric_trends(raw: list) -> list:
+        """Parse metric trends from LLM output, skipping malformed entries."""
+        trends = []
+        for t in raw:
+            try:
+                if isinstance(t, dict):
+                    trends.append(MetricTrend(**t))
+                else:
+                    trends.append(MetricTrend(metric=str(t)))
+            except Exception:
+                pass
+        return trends
 
     @staticmethod
     def _quarter_sort_key(quarter: str, year: str) -> tuple:
@@ -368,7 +379,10 @@ class AnalysisPipeline:
         metrics = []
         for m in data.get("metrics", []):
             if isinstance(m, dict):
-                metrics.append(FinancialMetric(**m))
+                try:
+                    metrics.append(FinancialMetric(**m))
+                except Exception:
+                    pass  # Skip malformed metrics from LLM
 
         return metrics
 
@@ -403,7 +417,10 @@ class AnalysisPipeline:
         commentary = []
         for c in data.get("commentary", []):
             if isinstance(c, dict):
-                commentary.append(ManagementCommentary(**c))
+                try:
+                    commentary.append(ManagementCommentary(**c))
+                except Exception:
+                    pass  # Skip malformed commentary from LLM
 
         return {
             "themes": [t for t in themes if t],

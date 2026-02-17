@@ -14,19 +14,19 @@ class FinancialMetric(BaseModel):
     """A single financial metric extracted from an earnings document."""
     name: str
     value: Optional[float] = None
-    unit: str = "INR Cr"
-    period: str = ""
+    unit: Optional[str] = "INR Cr"
+    period: Optional[str] = ""
     yoy_growth: Optional[float] = None
     qoq_growth: Optional[float] = None
     margin: Optional[float] = None
-    raw_text: str = ""
+    raw_text: Optional[str] = ""
 
 
 class ManagementCommentary(BaseModel):
     """Key management commentary point from a transcript."""
-    topic: str
-    summary: str
-    sentiment: str = "neutral"
+    topic: Optional[str] = ""
+    summary: Optional[str] = ""
+    sentiment: Optional[str] = "neutral"
     verbatim_quote: Optional[str] = None
 
 

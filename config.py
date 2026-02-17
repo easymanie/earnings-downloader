@@ -58,7 +58,7 @@ class Config:
     ollama_model: str = field(default_factory=lambda: os.environ.get("OLLAMA_MODEL", "llama3.1:8b"))
     ollama_url: str = field(default_factory=lambda: os.environ.get("OLLAMA_URL", "http://localhost:11434"))
     openrouter_api_key: Optional[str] = field(default_factory=lambda: os.environ.get("OPENROUTER_API_KEY"))
-    openrouter_model: str = field(default_factory=lambda: os.environ.get("OPENROUTER_MODEL", "anthropic/claude-sonnet-4"))
+    openrouter_model: str = field(default_factory=lambda: os.environ.get("OPENROUTER_MODEL", "nvidia/nemotron-3-nano-30b-a3b:free"))
 
     # Analysis settings
     analysis_db_path: str = field(default_factory=lambda: os.environ.get("ANALYSIS_DB_PATH", "./data/earnings.db"))
