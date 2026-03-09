@@ -60,6 +60,10 @@ class Config:
     openrouter_api_key: Optional[str] = field(default_factory=lambda: os.environ.get("OPENROUTER_API_KEY"))
     openrouter_model: str = field(default_factory=lambda: os.environ.get("OPENROUTER_MODEL", "nvidia/nemotron-3-nano-30b-a3b:free"))
 
+    # Turso (libSQL) — for persistent DB on Render/serverless
+    turso_database_url: Optional[str] = field(default_factory=lambda: os.environ.get("TURSO_DATABASE_URL"))
+    turso_auth_token: Optional[str] = field(default_factory=lambda: os.environ.get("TURSO_AUTH_TOKEN"))
+
     # Analysis settings
     analysis_db_path: str = field(default_factory=lambda: os.environ.get("ANALYSIS_DB_PATH", "./data/earnings.db"))
     max_tokens_per_analysis: int = 4096

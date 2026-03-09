@@ -1,18 +1,31 @@
-"""SQLite database setup and management."""
+"""SQLite database setup and management. Supports local SQLite and Turso (libSQL)."""
 
 import os
 import sqlite3
 
+# Use Turso (libSQL) if configured, otherwise fall back to sqlite3
+_turso_url = os.environ.get("TURSO_DATABASE_URL")
+_turso_token = os.environ.get("TURSO_AUTH_TOKEN")
+_use_turso = bool(_turso_url and _turso_token)
+
+if _use_turso:
+    import libsql_experimental as libsql
+
 
 class Database:
-    """SQLite database wrapper."""
+    """SQLite/Turso database wrapper."""
 
     def __init__(self, db_path: str):
         self.db_path = db_path
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        if not _use_turso:
+            os.makedirs(os.path.dirname(db_path), exist_ok=True)
         self._init_tables()
 
-    def _get_conn(self) -> sqlite3.Connection:
+    def _get_conn(self):
+        if _use_turso:
+            conn = libsql.connect(database=_turso_url, auth_token=_turso_token)
+            conn.row_factory = sqlite3.Row
+            return conn
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")

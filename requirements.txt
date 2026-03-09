@@ -7,6 +7,9 @@ fastapi>=0.100.0
 uvicorn>=0.22.0
 rapidfuzz>=3.0.0
 
+# Turso (libSQL) for persistent cloud DB
+libsql-experimental>=0.0.68
+
 # PDF extraction
 PyMuPDF>=1.23.0
 pdfplumber>=0.10.0

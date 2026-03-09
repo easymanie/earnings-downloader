@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: earnings-downloader
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api.app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      - key: LLM_PROVIDER
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false

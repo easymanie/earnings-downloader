@@ -15,7 +15,7 @@ python3 cli/app.py
 pip install -r requirements.txt
 ```
 
-No tests exist yet. No build step required. Deployed to Railway via `git push` (auto-deploys from main).
+No tests exist yet. No build step required. Deployed to Render (auto-deploys from main). Database hosted on Turso (libSQL).
 
 ## Architecture
 
@@ -42,7 +42,14 @@ Release months Sep-Nov → Q2 results
 Release month Dec      → Q3 results
 ```
 
-Never treat Indian source months as "which quarter contains this month" — always map to the prior quarter. This mapping exists in both `sources/india/screener.py` and `sources/india/company_ir.py`.
+Never treat Indian source months as "which quarter contains this month" — always map to the prior quarter. This mapping exists in all four India sources: `bse.py`, `nse.py`, `screener.py`, `company_ir.py`.
+
+### NSE Source Quirks
+
+- Requires session cookies refreshed every ~55s or ~8 requests (seeded from `/get-quotes/equity`)
+- Do NOT send `Accept-Encoding: br` — `requests` library can't decode Brotli, causes JSON parse failure
+- `desc` field is free-form; "Updates" is a generic bucket — do not classify as any doc type
+- "Outcome of Board Meeting" filings: check `attchmntText` for "financial result" to classify as `pnl`
 
 ### Analysis Pipeline
 
@@ -101,6 +108,10 @@ CLAUDE_MODEL=claude-sonnet-4-20250514
 OPENAI_MODEL=gpt-4o
 GEMINI_MODEL=gemini-2.0-flash
 
+# Turso (persistent DB for Render)
+TURSO_DATABASE_URL=              # libsql://your-db-name.turso.io
+TURSO_AUTH_TOKEN=                # From `turso db tokens create`
+
 # East Asian sources
 DART_API_KEY=                    # Korea DART API
 TDNET_API_ID=                    # Japan J-Quants API
@@ -117,4 +128,6 @@ TDNET_API_PASSWORD=              # Japan J-Quants API
 
 ### Deployment
 
-Hosted on Railway. Config in `railway.json` and `Procfile`. Auto-deploys on push to main.
+Hosted on Render. Config in `render.yaml` and `Procfile`. Auto-deploys on push to main.
+Database hosted on Turso (libSQL) for persistence across deploys. Set `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` env vars.
+For local development, omit Turso env vars to use local SQLite at `./data/earnings.db`.
