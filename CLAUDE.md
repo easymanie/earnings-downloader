@@ -23,13 +23,20 @@ Downloads and analyzes quarterly earnings documents (transcripts, presentations,
 
 ### Key Design Decisions
 
-- **Pluggable sources**: Each region has source(s) extending `BaseSource` (`sources/base.py`). Auto-registration via `SourceRegistry`.
-- **Service layer**: `EarningsService` and `AnalysisService` in `core/services/` provide shared business logic for both CLI and API.
+- **Pluggable sources**: Each region has source(s) extending `BaseSource` (`sources/base.py`). Auto-registration via `SourceRegistry` — call `SourceRegistry.register(instance)` at module level, import in `sources/{region}/__init__.py`.
+- **Service layer**: `EarningsService` and `AnalysisService` in `core/services/` provide shared business logic for both CLI and API. Services are lazy-initialized singletons in API routes.
 - **Multi-LLM support**: Factory pattern in `analysis/llm/__init__.py` — `get_llm_client(provider)` returns a `BaseLLMClient`. Supports Claude, OpenAI, Gemini, Ollama (local), and OpenRouter (free models via OpenAI-compatible API).
 - **OpenRouter specifics**: Reuses `OpenAILLMClient` with custom `base_url` and `json_mode=False` (free models don't support `response_format: json_object`). Default model: `nvidia/nemotron-3-nano-30b-a3b:free`.
 - **Company aliases**: `data/company_aliases.json` maps brand/colloquial names (e.g., "Mamaearth" → "Honasa Consumer", "PayTM" → "One 97 Communications") to official listed names. Resolved at service level in `EarningsService._resolve_alias()`.
-- **Fiscal year handling**: India/Japan use Apr-Mar FY; US/Korea/China use calendar year.
-- **Fuzzy matching**: Uses `rapidfuzz` library for company name matching.
+- **Fiscal year handling**: India/Japan use Apr-Mar FY; US/Korea/China use calendar year. Encoded in `FiscalYearType` enum.
+- **Fuzzy matching**: Uses `rapidfuzz` library for company name matching. Normalization strips suffixes (Ltd, Inc, etc.) in `core/models.py`.
+
+### Storage Layer
+
+- **Database** (`core/storage/database.py`): Wrapper that routes to Turso (libSQL) when `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` are set, otherwise local SQLite. Each method opens a fresh connection.
+- **Repositories** (`core/storage/repositories.py`): `AnalysisRepository`, `ComparisonRepository`, `IndustryRepository` — all use upsert via `ON CONFLICT...DO UPDATE` for idempotent writes.
+- **Schema**: 4 tables — `company_analyses`, `quarter_comparisons`, `industry_analyses`, `industry_mappings`. Complex Pydantic models serialized as JSON in TEXT columns.
+- **Industry seeding**: `IndustryRepository.seed_from_json()` populates from `data/industries.json` on first run.
 
 ### Indian Quarter Mapping — Critical Domain Rule
 
@@ -53,11 +60,11 @@ Never treat Indian source months as "which quarter contains this month" — alwa
 
 ### Analysis Pipeline
 
-1. **PDF Extraction** (`analysis/extractor.py`): PyMuPDF for transcripts, pdfplumber for presentations/tables
+1. **PDF Extraction** (`analysis/extractor.py`): PyMuPDF for transcripts, pdfplumber for presentations/tables (PyMuPDF fallback)
 2. **LLM Analysis** (`analysis/pipeline.py`): Two-pass — `_extract_metrics()` then `_extract_themes()` per quarter
 3. **Multi-Quarter Synthesis** (`analyze_multi_quarter()`): Analyzes N quarters, then runs trend prompt for longitudinal context (metric trends, theme evolution, narrative shifts, consistency assessment)
-4. **Storage**: Results cached in SQLite (`data/earnings.db`) via repositories in `core/storage/`
-5. **Comparison** (`analysis/comparator.py`): Pure Python QoQ/YoY with configurable materiality thresholds
+4. **Storage**: Results cached via repositories in `core/storage/`
+5. **Comparison** (`analysis/comparator.py`): Pure Python QoQ/YoY with materiality thresholds — `material_change_pct: 10%`, `notable_change_pct: 5%` (configurable in `config.py`)
 6. **Industry Aggregation**: Cross-company theme aggregation and narrative generation
 
 All prompts are India-specific (INR Cr, FY convention). Free/smaller LLMs may return malformed JSON — the pipeline has try/except guards around all Pydantic model construction.

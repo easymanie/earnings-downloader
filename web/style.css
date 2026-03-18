@@ -188,6 +188,12 @@ tr:hover {
     background: #6d28d9;
 }
 
+#results-table input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
 #download-all-btn {
     background: #059669;
 }

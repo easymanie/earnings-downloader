@@ -21,9 +21,17 @@ const autocompleteDropdown = document.getElementById('autocomplete-dropdown');
 let autocompleteTimer = null;
 let activeIndex = -1;
 
+// Select-all checkbox
+const selectAllCheckbox = document.getElementById('select-all');
+
 // Event Listeners
 searchForm.addEventListener('submit', handleSearch);
 downloadAllBtn.addEventListener('click', handleDownloadAll);
+selectAllCheckbox.addEventListener('change', () => {
+    const checkboxes = resultsBody.querySelectorAll('input[name="doc-select"]');
+    checkboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
+    updateDownloadBtnText();
+});
 
 // --- Autocomplete ---
 
@@ -201,9 +209,10 @@ function displayResults(documents) {
 
     noResultsEl.classList.add('hidden');
 
-    documents.forEach(doc => {
+    documents.forEach((doc, i) => {
         const row = document.createElement('tr');
         row.innerHTML = `
+            <td><input type="checkbox" name="doc-select" data-index="${i}" checked></td>
             <td>${escapeHtml(doc.company.substring(0, 30))}</td>
             <td>${escapeHtml(doc.quarter)} ${escapeHtml(doc.year)}</td>
             <td>${formatDocType(doc.doc_type)}</td>
@@ -217,23 +226,32 @@ function displayResults(documents) {
         resultsBody.appendChild(row);
     });
 
+    // Wire up individual checkboxes to update button text and select-all state
+    resultsBody.querySelectorAll('input[name="doc-select"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+            updateDownloadBtnText();
+            updateSelectAllState();
+        });
+    });
+
+    selectAllCheckbox.checked = true;
     downloadAllBtn.classList.remove('hidden');
-    downloadAllBtn.textContent = `Download All (${documents.length} files)`;
+    updateDownloadBtnText();
 }
 
 async function handleDownloadAll() {
-    if (currentDocuments.length === 0) return;
+    const selectedDocs = getSelectedDocuments();
+    if (selectedDocs.length === 0) {
+        alert('Please select at least one document to download');
+        return;
+    }
 
     const company = document.getElementById('company').value.trim();
-    const region = document.getElementById('region').value;
-
-    const typeCheckboxes = document.querySelectorAll('input[name="types"]:checked');
-    const types = Array.from(typeCheckboxes).map(cb => cb.value);
 
     downloadAllBtn.disabled = true;
     downloadAllBtn.textContent = 'Preparing ZIP...';
     downloadStatus.classList.remove('hidden');
-    statusMessage.textContent = 'Fetching documents and creating ZIP file...';
+    statusMessage.textContent = `Fetching ${selectedDocs.length} documents and creating ZIP file...`;
 
     try {
         const response = await fetch(`${API_BASE}/api/downloads/zip`, {
@@ -242,16 +260,15 @@ async function handleDownloadAll() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                company,
-                region,
-                count: parseInt(document.getElementById('count').value),
-                include_transcripts: types.includes('transcript'),
-                include_presentations: types.includes('presentation'),
-                include_press_releases: types.includes('press_release'),
-                include_balance_sheets: types.includes('balance_sheet'),
-                include_pnl: types.includes('pnl'),
-                include_cash_flow: types.includes('cash_flow'),
-                include_annual_reports: types.includes('annual_report')
+                documents: selectedDocs.map(doc => ({
+                    company: doc.company,
+                    quarter: doc.quarter,
+                    year: doc.year,
+                    doc_type: doc.doc_type,
+                    url: doc.url,
+                    source: doc.source,
+                    filename: doc.filename
+                }))
             })
         });
 
@@ -289,15 +306,33 @@ async function handleDownloadAll() {
         window.URL.revokeObjectURL(url);
         a.remove();
 
-        statusMessage.textContent = `Downloaded ${currentDocuments.length} documents as ZIP!`;
+        statusMessage.textContent = `Downloaded ${selectedDocs.length} documents as ZIP!`;
 
     } catch (error) {
         console.error('Download error:', error);
         statusMessage.textContent = `Error: ${error.message}`;
     } finally {
         downloadAllBtn.disabled = false;
-        downloadAllBtn.textContent = `Download All (${currentDocuments.length} files)`;
+        updateDownloadBtnText();
     }
+}
+
+function getSelectedDocuments() {
+    const checkboxes = resultsBody.querySelectorAll('input[name="doc-select"]:checked');
+    return Array.from(checkboxes).map(cb => currentDocuments[parseInt(cb.dataset.index)]);
+}
+
+function updateDownloadBtnText() {
+    const selected = resultsBody.querySelectorAll('input[name="doc-select"]:checked').length;
+    const total = currentDocuments.length;
+    downloadAllBtn.textContent = `Download Selected (${selected}/${total} files)`;
+}
+
+function updateSelectAllState() {
+    const all = resultsBody.querySelectorAll('input[name="doc-select"]');
+    const checked = resultsBody.querySelectorAll('input[name="doc-select"]:checked');
+    selectAllCheckbox.checked = all.length === checked.length;
+    selectAllCheckbox.indeterminate = checked.length > 0 && checked.length < all.length;
 }
 
 function formatDocType(docType) {

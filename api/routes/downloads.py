@@ -32,18 +32,20 @@ class DocumentResponse(BaseModel):
     filename: str
 
 
+class DownloadDocument(BaseModel):
+    """A single document to download."""
+    company: str
+    quarter: str
+    year: str
+    doc_type: str
+    url: str
+    source: str
+    filename: str
+
+
 class DownloadRequest(BaseModel):
-    """Download request body."""
-    company: str  # Can be comma-separated for multiple companies
-    region: Optional[str] = "india"
-    count: int = 5
-    include_transcripts: bool = True
-    include_presentations: bool = True
-    include_press_releases: bool = True
-    include_balance_sheets: bool = True
-    include_pnl: bool = True
-    include_cash_flow: bool = True
-    include_annual_reports: bool = True
+    """Download request body — list of specific documents to ZIP."""
+    documents: List[DownloadDocument]
 
 
 @router.get("/documents", response_model=List[DocumentResponse])
@@ -193,39 +195,25 @@ async def fetch_file(session: aiohttp.ClientSession, url: str, doc: EarningsCall
 @router.post("/downloads/zip")
 async def download_as_zip(request: DownloadRequest):
     """
-    Download all earnings documents as a ZIP file.
+    Download selected earnings documents as a ZIP file.
 
-    Fetches all documents and returns them as a downloadable ZIP.
-    Supports multiple companies (comma-separated).
+    Accepts a list of specific documents (with URLs) and returns them as a downloadable ZIP.
     """
-    region_enum = None
-    if request.region:
-        try:
-            region_enum = Region(request.region.lower())
-        except ValueError:
-            raise HTTPException(status_code=400, detail=f"Invalid region: {request.region}")
+    if not request.documents:
+        raise HTTPException(status_code=400, detail="No documents provided")
 
-    # Support multiple companies (comma-separated)
-    companies = [c.strip() for c in request.company.split(",") if c.strip()]
-
-    all_documents = []
-    for comp in companies:
-        documents = service.get_earnings_documents(
-            comp,
-            region=region_enum,
-            count=request.count,
-            include_transcripts=request.include_transcripts,
-            include_presentations=request.include_presentations,
-            include_press_releases=request.include_press_releases,
-            include_balance_sheets=request.include_balance_sheets,
-            include_pnl=request.include_pnl,
-            include_cash_flow=request.include_cash_flow,
-            include_annual_reports=request.include_annual_reports
+    # Build EarningsCall objects for each document
+    all_documents = [
+        EarningsCall(
+            company=doc.company,
+            quarter=doc.quarter,
+            year=doc.year,
+            doc_type=doc.doc_type,
+            url=doc.url,
+            source=doc.source,
         )
-        all_documents.extend(documents)
-
-    if not all_documents:
-        raise HTTPException(status_code=404, detail="No documents found for the specified companies")
+        for doc in request.documents
+    ]
 
     # Fetch all files concurrently
     async with aiohttp.ClientSession(
@@ -248,6 +236,7 @@ async def download_as_zip(request: DownloadRequest):
     zip_buffer.seek(0)
 
     # Generate safe filename
+    companies = list(set(doc.company for doc in request.documents))
     if len(companies) == 1:
         safe_name = "".join(c if c.isalnum() or c in " -_" else "_" for c in companies[0])
         safe_name = safe_name.strip().replace(" ", "_")[:30]
