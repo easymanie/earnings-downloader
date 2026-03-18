@@ -9,7 +9,7 @@ _turso_token = os.environ.get("TURSO_AUTH_TOKEN")
 _use_turso = bool(_turso_url and _turso_token)
 
 if _use_turso:
-    import libsql_experimental as libsql
+    import libsql
 
 
 class Database:
