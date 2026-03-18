@@ -8,7 +8,7 @@ uvicorn>=0.22.0
 rapidfuzz>=3.0.0
 
 # Turso (libSQL) for persistent cloud DB
-libsql-experimental>=0.0.68
+libsql-experimental>=0.0.50
 
 # PDF extraction
 PyMuPDF>=1.23.0
