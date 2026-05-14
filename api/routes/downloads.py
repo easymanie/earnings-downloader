@@ -54,7 +54,7 @@ async def get_documents(
     region: Optional[str] = Query("india", description="Region (india, us, japan, korea, china)"),
     count: int = Query(8, ge=1, le=40, description="Number of quarters per company (max 40 = 10 years)"),
     types: Optional[str] = Query(
-        "transcript,presentation,press_release,balance_sheet,pnl,cash_flow,annual_report",
+        "transcript,presentation,press_release,pnl,annual_report",
         description="Document types (comma-separated)"
     )
 ):

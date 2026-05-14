@@ -15,9 +15,9 @@ class Config:
     include_transcripts: bool = True
     include_presentations: bool = True
     include_press_releases: bool = True
-    include_balance_sheets: bool = True
+    include_balance_sheets: bool = False
     include_pnl: bool = True
-    include_cash_flow: bool = True
+    include_cash_flow: bool = False
     include_annual_reports: bool = True
 
     # Request settings
